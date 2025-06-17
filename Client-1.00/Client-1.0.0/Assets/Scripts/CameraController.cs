@@ -92,26 +92,30 @@ namespace DevelopersHub.ClashOfWhatever {
             _inputs.Main.TouchZoom.canceled -= _ => ZoomCanceled(); 
         }
         private void MoveStarted() {
-            _moving = true;
+            if (UI_Main.instance.isActive) {
+                _moving = true;
+            }
         }
         private void MoveCanceled() {
             _moving = false;
         }
         private void ZoomStarted() {
-            Vector2 touch0 = _inputs.Main.TouchPosition0.ReadValue<Vector2>();
-            Vector2 touch1 = _inputs.Main.TouchPosition1.ReadValue<Vector2>();
-            _zoomPositionOnScreen = Vector2.Lerp(touch0, touch1, 0.5f);
-            _zoomPositionInWorld = CameraScreenPositionToPlanePosition(_zoomPositionOnScreen);
-            _zoomBaseValue = _zoom;
+            if (UI_Main.instance.isActive) {
+                Vector2 touch0 = _inputs.Main.TouchPosition0.ReadValue<Vector2>();
+                Vector2 touch1 = _inputs.Main.TouchPosition1.ReadValue<Vector2>();
+                _zoomPositionOnScreen = Vector2.Lerp(touch0, touch1, 0.5f);
+                _zoomPositionInWorld = CameraScreenPositionToPlanePosition(_zoomPositionOnScreen);
+                _zoomBaseValue = _zoom;
 
-            touch0.x /= Screen.width;
-            touch1.x /= Screen.width;
-            touch0.y /= Screen.height;
-            touch1.y /= Screen.height;
+                touch0.x /= Screen.width;
+                touch1.x /= Screen.width;
+                touch0.y /= Screen.height;
+                touch1.y /= Screen.height;
 
-            _zoomBaseDistance = Vector2.Distance(touch0, touch1);
+                _zoomBaseDistance = Vector2.Distance(touch0, touch1);
 
-            _zooming = true;
+                _zooming = true;
+            }
         }
         private void ZoomCanceled() {
             _zooming = false;
