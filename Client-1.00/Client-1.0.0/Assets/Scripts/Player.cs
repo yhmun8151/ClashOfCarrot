@@ -6,7 +6,7 @@ namespace DevelopersHub.ClashOfWhatever
     public class Player : MonoBehaviour
     {
         public enum RequestsID {
-            AUTH = 1, SYNC = 2
+            AUTH = 1, SYNC = 2, BUILD = 3
         }
         void Start()
         {
