@@ -91,6 +91,15 @@ namespace DevelopersHub.ClashOfWhatever
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": true
+                },
+                {
+                    ""name"": ""PointerPosition"",
+                    ""type"": ""Value"",
+                    ""id"": ""764773e8-caa6-4b00-b9f8-42b3407af66e"",
+                    ""expectedControlType"": ""Vector2"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": true
                 }
             ],
             ""bindings"": [
@@ -214,6 +223,28 @@ namespace DevelopersHub.ClashOfWhatever
                     ""action"": ""TouchPosition1"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""ce717d58-03d8-4d10-805e-fdc02ad5b50f"",
+                    ""path"": ""<Mouse>/position"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""PointerPosition"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""a5649ddd-011f-48ce-8f5d-3a7bbd22d594"",
+                    ""path"": ""<Touchscreen>/primaryTouch/position"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""PointerPosition"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -229,6 +260,7 @@ namespace DevelopersHub.ClashOfWhatever
             m_Main_TouchZoom = m_Main.FindAction("TouchZoom", throwIfNotFound: true);
             m_Main_TouchPosition0 = m_Main.FindAction("TouchPosition0", throwIfNotFound: true);
             m_Main_TouchPosition1 = m_Main.FindAction("TouchPosition1", throwIfNotFound: true);
+            m_Main_PointerPosition = m_Main.FindAction("PointerPosition", throwIfNotFound: true);
         }
 
         ~@Controls()
@@ -302,6 +334,7 @@ namespace DevelopersHub.ClashOfWhatever
         private readonly InputAction m_Main_TouchZoom;
         private readonly InputAction m_Main_TouchPosition0;
         private readonly InputAction m_Main_TouchPosition1;
+        private readonly InputAction m_Main_PointerPosition;
         public struct MainActions
         {
             private @Controls m_Wrapper;
@@ -313,6 +346,7 @@ namespace DevelopersHub.ClashOfWhatever
             public InputAction @TouchZoom => m_Wrapper.m_Main_TouchZoom;
             public InputAction @TouchPosition0 => m_Wrapper.m_Main_TouchPosition0;
             public InputAction @TouchPosition1 => m_Wrapper.m_Main_TouchPosition1;
+            public InputAction @PointerPosition => m_Wrapper.m_Main_PointerPosition;
             public InputActionMap Get() { return m_Wrapper.m_Main; }
             public void Enable() { Get().Enable(); }
             public void Disable() { Get().Disable(); }
@@ -343,6 +377,9 @@ namespace DevelopersHub.ClashOfWhatever
                 @TouchPosition1.started += instance.OnTouchPosition1;
                 @TouchPosition1.performed += instance.OnTouchPosition1;
                 @TouchPosition1.canceled += instance.OnTouchPosition1;
+                @PointerPosition.started += instance.OnPointerPosition;
+                @PointerPosition.performed += instance.OnPointerPosition;
+                @PointerPosition.canceled += instance.OnPointerPosition;
             }
 
             private void UnregisterCallbacks(IMainActions instance)
@@ -368,6 +405,9 @@ namespace DevelopersHub.ClashOfWhatever
                 @TouchPosition1.started -= instance.OnTouchPosition1;
                 @TouchPosition1.performed -= instance.OnTouchPosition1;
                 @TouchPosition1.canceled -= instance.OnTouchPosition1;
+                @PointerPosition.started -= instance.OnPointerPosition;
+                @PointerPosition.performed -= instance.OnPointerPosition;
+                @PointerPosition.canceled -= instance.OnPointerPosition;
             }
 
             public void RemoveCallbacks(IMainActions instance)
@@ -394,6 +434,7 @@ namespace DevelopersHub.ClashOfWhatever
             void OnTouchZoom(InputAction.CallbackContext context);
             void OnTouchPosition0(InputAction.CallbackContext context);
             void OnTouchPosition1(InputAction.CallbackContext context);
+            void OnPointerPosition(InputAction.CallbackContext context);
         }
     }
 }

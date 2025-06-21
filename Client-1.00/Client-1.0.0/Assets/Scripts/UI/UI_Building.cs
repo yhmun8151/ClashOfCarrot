@@ -7,16 +7,21 @@ namespace DevelopersHub.ClashOfWhatever {
     {
         [SerializeField] private int _prefabIndex = 0;
         [SerializeField] private Button _button = null;
+        private static UI_Building _instance = null;
+        public static UI_Building instance {get { return _instance; } set {_instance = value;}}
+
         void Start()
         {
             _button.onClick.AddListener(Clicked);
         }
         private void Clicked() {
+            // Shop에 빌딩 버튼 눌렸을때 이벤트 
             UI_Shop.instance.SetStatus(false);
             UI_Main.instance.SetStatus(true);
 
             Vector3 position = Vector3.zero;
             Building building = Instantiate(UI_Main.instance._buildingPrefabs[_prefabIndex], position, Quaternion.identity);
+            CameraController.instance.isPlaceBuilding = true;
         }   
         private void ConfirmBuild() {
             Packet packet = new Packet();

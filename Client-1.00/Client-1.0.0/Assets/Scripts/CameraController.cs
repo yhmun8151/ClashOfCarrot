@@ -4,8 +4,11 @@ namespace DevelopersHub.ClashOfWhatever {
     using UnityEngine;
     using UnityEngine.UIElements;
 
-    public class Controller : MonoBehaviour
+    public class CameraController : MonoBehaviour
     {
+        private static CameraController _instance = null;
+        public static CameraController instance {get { return _instance; }}
+
         [SerializeField] private Camera _camera = null;
         [SerializeField] private float _moveSpeed = 400;
         [SerializeField] private float _moveSmooth = 5;
@@ -30,9 +33,13 @@ namespace DevelopersHub.ClashOfWhatever {
         private Transform _root = null;
         private Transform _pivot = null;
         private Transform _target = null;
+        private bool _building = false;
+        public bool isPlaceBuilding {get {return _building;} set {_building = value;}}
+        Vector3 _buildBasePosition = Vector3.zero;
 
         void Awake()
         {
+            _instance = this;
             _inputs = new Controls();   
             _root = new GameObject("CameraHelper").transform;
             _pivot = new GameObject("CameraPivot").transform;
@@ -93,7 +100,11 @@ namespace DevelopersHub.ClashOfWhatever {
         }
         private void MoveStarted() {
             if (UI_Main.instance.isActive) {
-                _moving = true;
+                if (_building) {
+                    _buildBasePosition = CameraScreenPositionToPlanePosition(_inputs.Main.PointerPosition.ReadValue<Vector2>());
+                } else {
+                    _moving = true;
+                }
             }
         }
         private void MoveCanceled() {
