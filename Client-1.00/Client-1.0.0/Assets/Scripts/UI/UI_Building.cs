@@ -21,8 +21,12 @@ namespace DevelopersHub.ClashOfWhatever {
 
             Vector3 position = Vector3.zero;
             Building building = Instantiate(UI_Main.instance._buildingPrefabs[_prefabIndex], position, Quaternion.identity);
+            Building.instance = building;
+            building.PlacedOnGrid(20, 20);
             CameraController.instance.isPlaceBuilding = true;
-        }   
+
+            UI_Build.instance.SetStatus(true);
+        }
         private void ConfirmBuild() {
             Packet packet = new Packet();
             packet.Write((int)Player.RequestsID.BUILD);

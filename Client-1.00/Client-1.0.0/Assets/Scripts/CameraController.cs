@@ -33,9 +33,9 @@ namespace DevelopersHub.ClashOfWhatever {
         private Transform _root = null;
         private Transform _pivot = null;
         private Transform _target = null;
-        private bool _building = false;
-        public bool isPlaceBuilding {get {return _building;} set {_building = value;}}
-        Vector3 _buildBasePosition = Vector3.zero;
+        private bool _building = false; public bool isPlaceBuilding {get {return _building;} set {_building = value;}}
+        private Vector3 _buildBasePosition = Vector3.zero;
+        private bool _movingBuilding = false;
 
         void Awake()
         {
@@ -102,13 +102,19 @@ namespace DevelopersHub.ClashOfWhatever {
             if (UI_Main.instance.isActive) {
                 if (_building) {
                     _buildBasePosition = CameraScreenPositionToPlanePosition(_inputs.Main.PointerPosition.ReadValue<Vector2>());
-                } else {
+                    if (UI_Main.instance._grid.IsWorldPositionIsOnPlane(_buildBasePosition, Building.instance.currentX, Building.instance.currentY, Building.instance.rows, Building.instance.columns)) {
+                        Building.instance.StartMovingOnGrid();
+                        _movingBuilding = true;
+                    } 
+                }
+                if (_movingBuilding == false) {
                     _moving = true;
                 }
             }
         }
         private void MoveCanceled() {
             _moving = false;
+            _movingBuilding = false;
         }
         private void ZoomStarted() {
             if (UI_Main.instance.isActive) {
@@ -176,6 +182,11 @@ namespace DevelopersHub.ClashOfWhatever {
             if (_camera.transform.rotation != _target.rotation) {
                 _camera.transform.rotation = _target.rotation;
             }
+
+            if (_building && _movingBuilding) {
+                Vector3 pos = CameraScreenPositionToPlanePosition(_inputs.Main.PointerPosition.ReadValue<Vector2>());
+                Building.instance.UpdateGridPosition(_buildBasePosition, pos);
+            }
         }
 
         private void AdjustBounds() {
@@ -231,7 +242,7 @@ namespace DevelopersHub.ClashOfWhatever {
             Vector3 ancher = _camera.transform.position - (_camera.transform.right.normalized * w / 2f) - (_camera.transform.up.normalized * h / 2f);
             return ancher + (_camera.transform.right.normalized * position.x / Screen.width * w) + (_camera.transform.up.normalized * position.y / Screen.height * h);
         }
-        private Vector3 CameraScreenPositionToPlanePosition(Vector2 position) {
+        public Vector3 CameraScreenPositionToPlanePosition(Vector2 position) {
             Vector3 point = CameraScreenPositionToWorldPosition(position);
             float h = point.y - _root.position.y;
             float x = h / Mathf.Sin(_angle * Mathf.Deg2Rad);

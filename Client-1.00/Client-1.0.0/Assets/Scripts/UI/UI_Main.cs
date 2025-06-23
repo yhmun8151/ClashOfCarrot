@@ -25,6 +25,7 @@ namespace DevelopersHub.ClashOfWhatever {
             _shopButton.onClick.AddListener(ShopButtonClicked);
         }
         private void ShopButtonClicked() {
+            UI_Build.instance.Cancel();
             UI_Shop.instance.SetStatus(true);
             SetStatus(false);
         }

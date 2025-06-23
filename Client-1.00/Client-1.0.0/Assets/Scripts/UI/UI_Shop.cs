@@ -1,4 +1,5 @@
 namespace DevelopersHub.ClashOfWhatever{
+    using System;
     using UnityEngine;
     using UnityEngine.UI;
 
@@ -6,8 +7,7 @@ namespace DevelopersHub.ClashOfWhatever{
     {
         [SerializeField] public GameObject _elements = null;
         [SerializeField] public Button _closeButton = null;
-        private static UI_Shop _instance = null;
-        public static UI_Shop instance {get { return _instance; }}
+        private static UI_Shop _instance = null; public static UI_Shop instance {get { return _instance; }}
 
         void Awake()
         {
@@ -26,5 +26,6 @@ namespace DevelopersHub.ClashOfWhatever{
         public void SetStatus(bool status) {
             _elements.SetActive(status);
         }
+        
     }
 }
