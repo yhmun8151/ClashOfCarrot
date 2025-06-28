@@ -1,4 +1,5 @@
 namespace DevelopersHub.ClashOfWhatever {
+    using DevelopersHub.RealtimeNetworking.Client;
     using UnityEngine;
     using UnityEngine.UI;
     public class UI_Build : MonoBehaviour
@@ -55,7 +56,14 @@ namespace DevelopersHub.ClashOfWhatever {
         }
 
         private void Confirm() {
-        
+            if(Building.instance != null) {
+                Packet packet = new Packet();
+                packet.Write((int)Player.RequestsID.BUILD);
+                packet.Write(SystemInfo.deviceUniqueIdentifier);
+                packet.Write(Building.instance.id);
+                // send requests to server 
+                Sender.TCP_Send(packet);
+            }
         }
         
         public void Cancel() {

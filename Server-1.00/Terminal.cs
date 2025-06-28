@@ -32,13 +32,21 @@ namespace DevelopersHub.RealtimeNetworking.Server
         public static void ReceivedPacket(int clientID, Packet packet)
         {
             // For test, remove it ->
-            int integerValue = packet.ReadInt();
-            string stringValue = packet.ReadString();
-            float floatValue = packet.ReadFloat();
-            Quaternion quaternionValue = packet.ReadQuaternion();
-            bool boolValue = packet.ReadBool();
-            Console.WriteLine("Int:{0} String:{1}, Float:{2}, Quaternion:{3}, Bool:{4}.", integerValue, stringValue, floatValue, quaternionValue, boolValue);
+            int id = packet.ReadInt();
+            // string stringValue = packet.ReadString();
+            // float floatValue = packet.ReadFloat();
+            // Quaternion quaternionValue = packet.ReadQuaternion();
+            // bool boolValue = packet.ReadBool();
+            // Console.WriteLine("Int:{0} String:{1}, Float:{2}, Quaternion:{3}, Bool:{4}.", integerValue, stringValue, floatValue, quaternionValue, boolValue);
             // <-
+
+            switch(id) {
+                case 3: 
+                    string device = packet.ReadString();
+                    int building = packet.ReadInt();
+                    Database.PlaceBuilding(clientID, device, building);
+                    break;
+            }
         }
 
         public static void ReceivedBytes(int clientID, int packetID, byte[] data)

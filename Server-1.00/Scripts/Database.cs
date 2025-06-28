@@ -2,6 +2,7 @@
 using MySql.Data.MySqlClient;
 using System.Data;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace DevelopersHub.RealtimeNetworking.Server
 {
@@ -50,37 +51,12 @@ namespace DevelopersHub.RealtimeNetworking.Server
                 return _mysqlConnection;
             }
         }
-
-        public static void Demo_MySQL_1()
-        {
-            string query = String.Format("UPDATE table SET int_column = {0}, string_column = '{1}', datetime_column = NOW();", 123, "Hello World");
-            using (MySqlCommand command = new MySqlCommand(query, mysqlConnection))
-            {
-                command.ExecuteNonQuery();
-            }
-        }
-
-        public static void Demo_MySQL_2()
-        {
-            string query = String.Format("SELECT column1, column2 FROM table WHERE column3 = {0} ORDER BY column1 DESC;", 123);
-            using (MySqlCommand command = new MySqlCommand(query, mysqlConnection))
-            {
-                using (MySqlDataReader reader = command.ExecuteReader())
-                {
-                    if (reader.HasRows)
-                    {
-                        while (reader.Read())
-                        {
-                            int column1 = int.Parse(reader["column1"].ToString());
-                            string column2 = reader["column2"].ToString();
-                        }
-                    }
-                }
-            }
-        }
+        
 
         public async static void AuthenticatePlayer(int id, string device) {
             long account_id = await AuthenticatePlayerAsync(id, device);
+            Server.clients[id].device = device;
+            Server.clients[id].account = account_id;
             Sender.TCP_Send(id, 1, account_id);
         }
 
@@ -118,12 +94,18 @@ namespace DevelopersHub.RealtimeNetworking.Server
         }
 
         public async static void SyncPlayerData(int id, string device) {
-            Data.Player player = await SyncPlayerDataAsync(id, device);
-            string data = Data.Serialize<Data.Player>(player);
-            Sender.TCP_Send(id, 2, data);
+            long account_id = Server.clients[id].account;
+            Data.Player player = await GetPlayerDataAsync(id, device);
+            List<Data.Building> buildings = await GetBuildingsAsync(account_id);
+            player.buildings = buildings;
+            
+            Packet packet = new Packet();
+            packet.Write(2);
+            packet.Write(Data.Serialize<Data.Player>(player));
+            Sender.TCP_Send(id, packet);
         }
 
-        private async static Task<Data.Player> SyncPlayerDataAsync(int id, string device) {
+        private async static Task<Data.Player> GetPlayerDataAsync(int id, string device) {
             Task<Data.Player> task = Task.Run(() => 
             {
                 Data.Player data = new Data.Player();
@@ -150,6 +132,99 @@ namespace DevelopersHub.RealtimeNetworking.Server
             return await task;
         }
 
+        public async static void PlaceBuilding(int id, string device, string buildingID) {
+            Data.Player player = await GetPlayerDataAsync(id, device);
+            Data.ServerBuilding building = await GetServerBuildingAsync(buildingID, 1);
+            if(player.gold >= building.requiredGold && player.elixir >= building.requiredElixir && player.gems >= building.requiredGems) {
+                long account_id = Server.clients[id].account;
+                List<Data.Building> buildings = await GetBuildingsAsync(account_id);
+                bool canPlaceBuilding = true;
+            }
+        }
+
+
+        private async static Task<Data.Building> GetBuildingAsync(long account, string id) {
+            Task<Data.Building> task = Task.Run(() => 
+            {
+                Data.Building data = new Data.Building();
+                data.id = id;
+                string query = String.Format("SELECT id, level FROM buildings WHERE account_id = {0} AND global_id = '{1}';", account, id);
+                using (MySqlCommand command = new MySqlCommand(query, mysqlConnection))
+                {
+                    using (MySqlDataReader reader = command.ExecuteReader())
+                    {
+                        if (reader.HasRows)
+                        {
+                            while (reader.Read())
+                            {
+                                data.databaseID = long.Parse(reader["id"].ToString());
+                                data.level = int.Parse(reader["level"].ToString());
+                            }
+                        }
+                    }
+                }
+                
+                return data;
+            });
+            return await task;
+        }
+
+
+        private async static Task<Data.ServerBuilding> GetServerBuildingAsync(string id, int level) {
+            Task<Data.ServerBuilding> task = Task.Run(() => 
+            {
+                Data.ServerBuilding data = new Data.ServerBuilding();
+                data.id = id;
+                string query = String.Format("SELECT id, req_gold, req_elixir, req_gems FROM server_buildings WHERE global_id = '{0}' AND level = '{1}';", id, level);
+                using (MySqlCommand command = new MySqlCommand(query, mysqlConnection))
+                {
+                    using (MySqlDataReader reader = command.ExecuteReader())
+                    {
+                        if (reader.HasRows)
+                        {
+                            while (reader.Read())
+                            {
+                                data.databaseID = long.Parse(reader["id"].ToString());
+                                data.level = level;
+                                data.requiredGold = int.Parse(reader["req_gold"].ToString());
+                                data.requiredElixir = int.Parse(reader["req_elixir"].ToString());
+                                data.requiredGems = int.Parse(reader["req_gems"].ToString());
+                            }
+                        }
+                    }
+                }
+                
+                return data;
+            });
+            return await task;
+        }
+
+        private async static Task<List<Data.Building>> GetBuildingsAsync(long account) {
+            Task<List<Data.Building>> task = Task.Run(() => 
+            {
+                List<Data.Building> data = new List<Data.Building>();
+                string query = String.Format("SELECT id, level FROM buildings WHERE account_id = '{0}';", account);
+                using (MySqlCommand command = new MySqlCommand(query, mysqlConnection))
+                {
+                    using (MySqlDataReader reader = command.ExecuteReader())
+                    {
+                        if (reader.HasRows)
+                        {
+                            while (reader.Read())
+                            {
+                                Data.Building building = new Data.Building();
+                                building.databaseID = long.Parse(reader["id"].ToString());
+                                building.level = int.Parse(reader["level"].ToString());
+                                data.Add(building);
+                            }
+                        }
+                    }
+                }
+                
+                return data;
+            });
+            return await task;
+        }
 
         
         #endregion

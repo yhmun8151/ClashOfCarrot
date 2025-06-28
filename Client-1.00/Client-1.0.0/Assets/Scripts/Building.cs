@@ -30,6 +30,7 @@ namespace DevelopersHub.ClashOfWhatever{
             _Y = y;
             Vector3 position = UI_Main.instance._grid.GetCenterPosition(x, y, _rows, _columns);
             transform.position = position;
+            SetBaseColor();
         }
 
         public void StartMovingOnGrid() {
@@ -55,7 +56,19 @@ namespace DevelopersHub.ClashOfWhatever{
 
             Vector3 position = UI_Main.instance._grid.GetCenterPosition(_currentX, _currentY, _rows, _columns);
             transform.position = position;
+
+            SetBaseColor();
         }
         
+        private void SetBaseColor() {
+            if (UI_Main.instance._grid.CanPlaceBuilding(this, currentX, currentY))
+            {
+                _baseArea.sharedMaterial.color = Color.green;
+            }
+            else 
+            {
+                _baseArea.sharedMaterial.color = Color.red;
+            }
+        }
     }
 }

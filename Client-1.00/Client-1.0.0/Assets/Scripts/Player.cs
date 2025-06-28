@@ -11,7 +11,7 @@ namespace DevelopersHub.ClashOfWhatever
         void Start()
         {
             RealtimeNetworking.OnLongReceived += ReceivedLong;
-            RealtimeNetworking.OnStringReceived += ReceivedString;
+            RealtimeNetworking.OnPacketReceived += ReceivedPacket;
             ConnectToServer();
         }
 
@@ -23,10 +23,12 @@ namespace DevelopersHub.ClashOfWhatever
                     break;
             }
         }
-        private void ReceivedString(int id, string value) {
+        private void ReceivedPacket(Packet packet) {
+            int id = packet.ReadInt();
             switch(id) {
                 case 2:
-                    Data.Player player = Data.Desrialize<Data.Player>(value);
+                    string playerClass = packet.ReadString();
+                    Data.Player player = Data.Desrialize<Data.Player>(playerClass);
                     UI_Main.instance._goldText.text = player.gold.ToString();
                     UI_Main.instance._elixerText.text = player.elixir.ToString();
                     UI_Main.instance._gemsText.text = player.gems.ToString();

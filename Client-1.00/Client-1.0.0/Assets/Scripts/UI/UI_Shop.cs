@@ -26,6 +26,5 @@ namespace DevelopersHub.ClashOfWhatever{
         public void SetStatus(bool status) {
             _elements.SetActive(status);
         }
-        
     }
 }
