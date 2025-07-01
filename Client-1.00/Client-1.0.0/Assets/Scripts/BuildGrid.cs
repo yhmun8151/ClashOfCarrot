@@ -9,6 +9,14 @@ namespace DevelopersHub.ClashOfWhatever {
         private int _columns = 45;
         private float _cellSize = 1f; public float cellSize {get {return _cellSize; } }
         public List<Building> buildings = new List<Building>();
+        public Building GetBuilding(long databaseID) {
+            for (int i = 0 ; i < buildings.Count; i ++) {
+                if (buildings[i].databaseID == databaseID) {
+                    return buildings[i];
+                }
+            }
+            return null;
+        }
         public Vector3 GetStartPosition(int x, int y) {
             Vector3 position = transform.position;
             position += (transform.right.normalized * x * _cellSize) + (transform.forward.normalized * y * _cellSize);

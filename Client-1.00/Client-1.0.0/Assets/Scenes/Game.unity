@@ -3305,7 +3305,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fa27205fb97ba429c93f2bf99055fe96, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _prefabIndex: 0
+  _id: goldmine
   _button: {fileID: 2059142535}
 --- !u!1 &1047782845
 GameObject:

@@ -59,8 +59,9 @@ namespace DevelopersHub.RealtimeNetworking.Server
             Server.clients[id].device = device;
             Server.clients[id].account = account_id;
             Packet packet = new Packet();
-            packet.Write(1);
-            Sender.TCP_Send(id, 1, account_id);
+            packet.Write((int) Terminal.RequestsID.AUTH);
+            packet.Write(account_id);
+            Sender.TCP_Send(id, packet);
         }
 
         private async static Task<long> AuthenticatePlayerAsync(int id, string device) {
@@ -103,7 +104,7 @@ namespace DevelopersHub.RealtimeNetworking.Server
             player.buildings = buildings;
             
             Packet packet = new Packet();
-            packet.Write(2);
+            packet.Write((int)Terminal.RequestsID.SYNC);
             string playerData = await Data.Serialize<Data.Player>(player);
             packet.Write(playerData);
             Sender.TCP_Send(id, packet);
@@ -260,7 +261,7 @@ namespace DevelopersHub.RealtimeNetworking.Server
             Task<List<Data.Building>> task = Task.Run(() => 
             {
                 List<Data.Building> data = new List<Data.Building>();
-                string query = String.Format("SELECT id, global_id level, x_position, y_position, columns_count, rows_count FROM buildings WHERE account_id = '{0}';", account);
+                string query = String.Format("SELECT id, global_id, level, x_position, y_position, columns_count, rows_count FROM buildings WHERE account_id = '{0}';", account);
                 using (MySqlCommand command = new MySqlCommand(query, mysqlConnection))
                 {
                     using (MySqlDataReader reader = command.ExecuteReader())

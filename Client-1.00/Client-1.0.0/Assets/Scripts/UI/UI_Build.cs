@@ -63,9 +63,9 @@ namespace DevelopersHub.ClashOfWhatever {
                 packet.Write(Building.instance.id);
                 packet.Write(Building.instance.currentX);
                 packet.Write(Building.instance.currentY);
-                
                 // send requests to server 
                 Sender.TCP_Send(packet);
+                Cancel();
             }
         }
         

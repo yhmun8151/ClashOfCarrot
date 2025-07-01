@@ -13,9 +13,10 @@ namespace DevelopersHub.ClashOfWhatever{
         }
         private BuildGrid _grid = null;
 
+        [SerializeField] private long _databaseID = 1; public long databaseID { get { return _databaseID; } set { _databaseID = value; } }
         [SerializeField] private int _rows = 1; public int rows { get { return _rows; } }
         [SerializeField] private int _columns = 1; public int columns { get { return _columns; } }
-        [SerializeField] private MeshRenderer _baseArea = null;
+        [SerializeField] public MeshRenderer _baseArea = null;
         [SerializeField] Level[] _levels = null;
 
         private int _currentX = 0; public int currentX { get { return _currentX; } }

@@ -37,16 +37,19 @@ namespace DevelopersHub.RealtimeNetworking.Server
         {
             // For test, remove it ->
             int id = packet.ReadInt();
-            // string stringValue = packet.ReadString();
-            // float floatValue = packet.ReadFloat();
-            // Quaternion quaternionValue = packet.ReadQuaternion();
-            // bool boolValue = packet.ReadBool();
-            // Console.WriteLine("Int:{0} String:{1}, Float:{2}, Quaternion:{3}, Bool:{4}.", integerValue, stringValue, floatValue, quaternionValue, boolValue);
-            // <-
-
-            switch(id) {
-                case 3: 
-                    string device = packet.ReadString();
+            string device = "";
+            
+            switch((RequestsID)id) {
+                case RequestsID.AUTH:
+                    device = packet.ReadString();
+                    Database.AuthenticatePlayer(clientID, device);
+                    break;
+                case RequestsID.SYNC:
+                    device = packet.ReadString();
+                    Database.SyncPlayerData(clientID, device);
+                    break;
+                case RequestsID.BUILD:
+                    device = packet.ReadString();
                     string building = packet.ReadString();
                     int x = packet.ReadInt();
                     int y = packet.ReadInt();
@@ -62,14 +65,7 @@ namespace DevelopersHub.RealtimeNetworking.Server
 
         public static void ReceivedString(int clientID, int packetID, string data)
         {
-            switch(packetID) {
-                case 1: 
-                    Database.AuthenticatePlayer(clientID, data);
-                    break;
-                case 2:
-                    Database.SyncPlayerData(clientID, data);
-                    break;
-            }
+            
         }
 
         public static void ReceivedInteger(int clientID, int packetID, int data)
