@@ -29,6 +29,10 @@ namespace DevelopersHub.RealtimeNetworking.Server
         #endregion
 
         #region Data
+        public enum RequestsID
+        {
+            AUTH = 1, SYNC = 2, BUILD = 3
+        }
         public static void ReceivedPacket(int clientID, Packet packet)
         {
             // For test, remove it ->
@@ -43,8 +47,10 @@ namespace DevelopersHub.RealtimeNetworking.Server
             switch(id) {
                 case 3: 
                     string device = packet.ReadString();
-                    int building = packet.ReadInt();
-                    Database.PlaceBuilding(clientID, device, building);
+                    string building = packet.ReadString();
+                    int x = packet.ReadInt();
+                    int y = packet.ReadInt();
+                    Database.PlaceBuilding(clientID, device, building, x, y);
                     break;
             }
         }

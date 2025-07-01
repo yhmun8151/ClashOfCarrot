@@ -3,6 +3,7 @@ using MySql.Data.MySqlClient;
 using System.Data;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Drawing;
 
 namespace DevelopersHub.RealtimeNetworking.Server
 {
@@ -57,6 +58,8 @@ namespace DevelopersHub.RealtimeNetworking.Server
             long account_id = await AuthenticatePlayerAsync(id, device);
             Server.clients[id].device = device;
             Server.clients[id].account = account_id;
+            Packet packet = new Packet();
+            packet.Write(1);
             Sender.TCP_Send(id, 1, account_id);
         }
 
@@ -101,7 +104,8 @@ namespace DevelopersHub.RealtimeNetworking.Server
             
             Packet packet = new Packet();
             packet.Write(2);
-            packet.Write(Data.Serialize<Data.Player>(player));
+            string playerData = await Data.Serialize<Data.Player>(player);
+            packet.Write(playerData);
             Sender.TCP_Send(id, packet);
         }
 
@@ -132,14 +136,61 @@ namespace DevelopersHub.RealtimeNetworking.Server
             return await task;
         }
 
-        public async static void PlaceBuilding(int id, string device, string buildingID) {
+        public async static void PlaceBuilding(int id, string device, string buildingID, int x, int y) {
+            Packet packet = new Packet();
+            packet.Write(3);
             Data.Player player = await GetPlayerDataAsync(id, device);
             Data.ServerBuilding building = await GetServerBuildingAsync(buildingID, 1);
             if(player.gold >= building.requiredGold && player.elixir >= building.requiredElixir && player.gems >= building.requiredGems) {
                 long account_id = Server.clients[id].account;
                 List<Data.Building> buildings = await GetBuildingsAsync(account_id);
                 bool canPlaceBuilding = true;
+                
+                if (x < 0 || y < 0 || x + building.columns > 45 || y + building.rows > 45)                 {
+                    canPlaceBuilding = false;
+                } else {
+                    
+                    for ( int i = 0 ; i < buildings.Count ; i++) {
+                        Rectangle rect1 = new Rectangle(buildings[i].x, buildings[i].y, buildings[i].columns, buildings[i].rows);
+                        Rectangle rect2 = new Rectangle(x, y, building.columns, building.rows);
+
+                        if (rect2.IntersectsWith(rect1)) {
+                            canPlaceBuilding = false;
+                        }
+                    }
+                    
+                }
+                if (canPlaceBuilding) {
+                    long building_id = await PlaceBuildingAsync(account_id, building, x, y);
+                    packet.Write(1);
+                } else {
+                    packet.Write(2);
+                }
             }
+            else {
+                packet.Write(0);
+            }
+            Sender.TCP_Send(id, packet);
+        }
+
+        private async static Task<long> PlaceBuildingAsync(long account_id, Data.ServerBuilding building, int x, int y) {
+            Task<long> task = Task.Run(() => 
+            {
+                long id = 0;
+                string query = String.Format("UPDATE accounts SET gold = gold - {0}, elixir = elixir - {1}, gems = gems - {2} WHERE id = {3};", building.requiredGold, building.requiredElixir, building.requiredGems, account_id);
+                using (MySqlCommand command = new MySqlCommand(query, mysqlConnection))
+                {
+                    command.ExecuteNonQuery();
+                }
+                query = String.Format("INSERT INTO buildings (global_id, account_id, x_position, y_position, columns_count, rows_count) VALUES('{0}', {1}, {2}, {3}, {4}, {5});", building.id, account_id, x, y, building.columns, building.rows);
+                using (MySqlCommand command = new MySqlCommand(query, mysqlConnection))
+                {
+                    command.ExecuteNonQuery();
+                    id = command.LastInsertedId;
+                }
+                return account_id;
+            });
+            return await task;
         }
 
 
@@ -148,7 +199,7 @@ namespace DevelopersHub.RealtimeNetworking.Server
             {
                 Data.Building data = new Data.Building();
                 data.id = id;
-                string query = String.Format("SELECT id, level FROM buildings WHERE account_id = {0} AND global_id = '{1}';", account, id);
+                string query = String.Format("SELECT id, level, x_position, y_position, columns_count, rows_count FROM buildings WHERE account_id = {0} AND global_id = '{1}';", account, id);
                 using (MySqlCommand command = new MySqlCommand(query, mysqlConnection))
                 {
                     using (MySqlDataReader reader = command.ExecuteReader())
@@ -159,6 +210,10 @@ namespace DevelopersHub.RealtimeNetworking.Server
                             {
                                 data.databaseID = long.Parse(reader["id"].ToString());
                                 data.level = int.Parse(reader["level"].ToString());
+                                data.x = int.Parse(reader["x_position"].ToString());
+                                data.y = int.Parse(reader["y_position"].ToString());
+                                data.columns = int.Parse(reader["columns_count"].ToString());
+                                data.rows = int.Parse(reader["rows_count"].ToString());
                             }
                         }
                     }
@@ -175,7 +230,7 @@ namespace DevelopersHub.RealtimeNetworking.Server
             {
                 Data.ServerBuilding data = new Data.ServerBuilding();
                 data.id = id;
-                string query = String.Format("SELECT id, req_gold, req_elixir, req_gems FROM server_buildings WHERE global_id = '{0}' AND level = '{1}';", id, level);
+                string query = String.Format("SELECT id, req_gold, req_elixir, req_gems, columns_count, rows_count FROM server_buildings WHERE global_id = '{0}' AND level = '{1}';", id, level);
                 using (MySqlCommand command = new MySqlCommand(query, mysqlConnection))
                 {
                     using (MySqlDataReader reader = command.ExecuteReader())
@@ -189,6 +244,8 @@ namespace DevelopersHub.RealtimeNetworking.Server
                                 data.requiredGold = int.Parse(reader["req_gold"].ToString());
                                 data.requiredElixir = int.Parse(reader["req_elixir"].ToString());
                                 data.requiredGems = int.Parse(reader["req_gems"].ToString());
+                                data.columns = int.Parse(reader["columns_count"].ToString());
+                                data.rows = int.Parse(reader["rows_count"].ToString());
                             }
                         }
                     }
@@ -203,7 +260,7 @@ namespace DevelopersHub.RealtimeNetworking.Server
             Task<List<Data.Building>> task = Task.Run(() => 
             {
                 List<Data.Building> data = new List<Data.Building>();
-                string query = String.Format("SELECT id, level FROM buildings WHERE account_id = '{0}';", account);
+                string query = String.Format("SELECT id, global_id level, x_position, y_position, columns_count, rows_count FROM buildings WHERE account_id = '{0}';", account);
                 using (MySqlCommand command = new MySqlCommand(query, mysqlConnection))
                 {
                     using (MySqlDataReader reader = command.ExecuteReader())
@@ -213,8 +270,13 @@ namespace DevelopersHub.RealtimeNetworking.Server
                             while (reader.Read())
                             {
                                 Data.Building building = new Data.Building();
+                                building.id = reader["global_id"].ToString();
                                 building.databaseID = long.Parse(reader["id"].ToString());
                                 building.level = int.Parse(reader["level"].ToString());
+                                building.x = int.Parse(reader["x_position"].ToString());
+                                building.y = int.Parse(reader["y_position"].ToString());
+                                building.columns = int.Parse(reader["columns_count"].ToString());
+                                building.rows = int.Parse(reader["rows_count"].ToString());
                                 data.Add(building);
                             }
                         }

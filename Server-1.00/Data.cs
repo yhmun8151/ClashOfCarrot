@@ -21,6 +21,10 @@ namespace DevelopersHub.RealtimeNetworking.Server
             public string id = "";
             public int level = 0;
             public long databaseID = 0;
+            public int x = 0;
+            public int y = 0;
+            public int columns = 0;
+            public int rows = 0;
         }
 
         public class ServerBuilding
@@ -31,19 +35,27 @@ namespace DevelopersHub.RealtimeNetworking.Server
             public int requiredGold = 0;
             public int requiredElixir = 0;
             public int requiredGems = 0; 
+            public int columns = 0;
+            public int rows = 0;
         }
 
-        public static string Serialize<T>(this T target) {
-            XmlSerializer xml = new XmlSerializer(typeof(T));
-            StringWriter writer = new StringWriter();
-            xml.Serialize(writer, target);
-            return writer.ToString();
+        public async static Task<string> Serialize<T>(this T target) {
+            Task<string> task = Task.Run(() => {
+                XmlSerializer xml = new XmlSerializer(typeof(T));
+                StringWriter writer = new StringWriter();
+                xml.Serialize(writer, target);
+                return writer.ToString();
+            });
+            return await task;
         }
 
-        public static T Desrialize<T>(this string target) {
-            XmlSerializer xml = new XmlSerializer(typeof(T));
-            StringReader reader = new StringReader(target);
-            return (T)xml.Deserialize(reader);
+        public async static Task<T> Desrialize<T>(this string target) {
+            Task<T> task = Task.Run(() => {
+                XmlSerializer xml = new XmlSerializer(typeof(T));
+                StringReader reader = new StringReader(target);
+                return (T)xml.Deserialize(reader);
+            });
+            return await task;
         }
     }
 }

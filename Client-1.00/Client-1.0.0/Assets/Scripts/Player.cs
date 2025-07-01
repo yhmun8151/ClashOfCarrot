@@ -10,7 +10,6 @@ namespace DevelopersHub.ClashOfWhatever
         }
         void Start()
         {
-            RealtimeNetworking.OnLongReceived += ReceivedLong;
             RealtimeNetworking.OnPacketReceived += ReceivedPacket;
             ConnectToServer();
         }
@@ -32,6 +31,20 @@ namespace DevelopersHub.ClashOfWhatever
                     UI_Main.instance._goldText.text = player.gold.ToString();
                     UI_Main.instance._elixerText.text = player.elixir.ToString();
                     UI_Main.instance._gemsText.text = player.gems.ToString();
+                    break;
+                case 3:
+                    int response = packet.ReadInt();
+                    switch (response) {
+                        case 0:
+                            Debug.Log("No resources");
+                            break;
+                        case 1:
+                            Debug.Log("Placed successfully");
+                            break;
+                        case 2:
+                            Debug.Log("Place taken");
+                            break;
+                    }
                     break;
             }
         }
