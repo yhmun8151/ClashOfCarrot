@@ -56,7 +56,7 @@ namespace DevelopersHub.ClashOfWhatever {
         }
 
         private void Confirm() {
-            if(Building.instance != null) {
+            if(Building.instance != null && UI_Main.instance._grid.CanPlaceBuilding(Building.instance, Building.instance.currentX, Building.instance.currentY)) {
                 Packet packet = new Packet();
                 packet.Write((int)Player.RequestsID.BUILD);
                 packet.Write(SystemInfo.deviceUniqueIdentifier);
