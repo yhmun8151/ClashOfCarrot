@@ -50,7 +50,7 @@ namespace DevelopersHub.ClashOfWhatever {
         
         void Start()
         {
-            Initialize(Vector3.zero, 40, 40, 40, 40, 45, 10, 5, 20);
+            Initialize(Vector3.zero, 40, 40, 40, 40, 45, 15, 5, 20);
         }
 
         private void Initialize(Vector3 center, float right, float left, float up, float down, float angle, float zoom, float zoomMin, float zoomMax) {
@@ -99,6 +99,7 @@ namespace DevelopersHub.ClashOfWhatever {
             _inputs.Main.TouchZoom.canceled -= _ => ZoomCanceled(); 
         }
         private void MoveStarted() {
+            // zinyoung 0729
             if (UI_Main.instance.isActive) {
                 if (_building) {
                     _buildBasePosition = CameraScreenPositionToPlanePosition(_inputs.Main.PointerPosition.ReadValue<Vector2>());

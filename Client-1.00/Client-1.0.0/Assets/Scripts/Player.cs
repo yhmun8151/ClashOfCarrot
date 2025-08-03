@@ -165,23 +165,24 @@ namespace DevelopersHub.ClashOfWhatever
                 CorpData corp = new CorpData();
                 
                 corp.Ticker = splitData[0];
-                corp.BPS = splitData[1];
-                corp.DIV = splitData[2];
-                corp.DPS = splitData[3];
-                corp.EPS = splitData[4];
-                corp.PBR = splitData[5];
-                corp.PER = splitData[6];
-                corp.거래대금 = splitData[7];
-                corp.거래량 = splitData[8];
-                corp.고가 = splitData[9];
-                corp.등락률 = splitData[10];
-                corp.상장주식수 = splitData[11];
-                corp.시가 = splitData[12];
-                corp.시가총액 = splitData[13];
-                corp.저가 = splitData[14];
-                corp.종가 = splitData[15];
-                corp.dart_data = splitData[16];
-                corp.dart_code = splitData[17];
+                corp.CompName = splitData[1];
+                corp.BPS = splitData[2];
+                corp.DIV = splitData[3];
+                corp.DPS = splitData[4];
+                corp.EPS = splitData[5];
+                corp.PBR = splitData[6];
+                corp.PER = splitData[7];
+                corp.거래대금 = splitData[8];
+                corp.거래량 = splitData[9];
+                corp.고가 = splitData[10];
+                corp.등락률 = splitData[11];
+                corp.상장주식수 = splitData[12];
+                corp.시가 = splitData[13];
+                corp.시가총액 = splitData[14];
+                corp.저가 = splitData[15];
+                corp.종가 = splitData[16];
+                corp.dart_data = splitData[17];
+                corp.dart_code = splitData[18];
                 
                 // menu 객체에 다 담았다면 dictionary에 key와 value값으로 저장
                 // 이렇게 해두면 dicCorp.Add("005930");로 corp.시가총액, corp.PER .. 접근 가능
@@ -193,18 +194,14 @@ namespace DevelopersHub.ClashOfWhatever
         public class CorpData
         {
             // Ticker,BPS,DIV,DPS,EPS,PBR,PER,거래대금,거래량,고가,등락률,상장주식수,시가,시가총액,저가,종가,dart_data,dart_code
-            public String Ticker,BPS,DIV,DPS,EPS,PBR,PER,거래대금,거래량,고가,등락률,상장주식수,시가,시가총액,저가,종가,dart_data,dart_code;
+            public String Ticker,CompName,BPS,DIV,DPS,EPS,PBR,PER,거래대금,거래량,고가,등락률,상장주식수,시가,시가총액,저가,종가,dart_data,dart_code;
         }
 
         private void SyncData_CSV() {
             Debug.Log("SyncData is called");
             if (dicCorp[stbd_code] != null) {
                 CorpData corp = dicCorp[stbd_code];
-                if (long.Parse(corp.시가총액) > 0 ) {
-                    Debug.Log(corp);
-                    Debug.Log(corp.시가총액);
-
-                }
+                Debug.Log(corp.CompName);
             }
             // UI_Main.instance._goldText.text = player.gold.ToString();
             // UI_Main.instance._elixerText.text = player.elixir.ToString();
