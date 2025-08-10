@@ -123,9 +123,17 @@ namespace DevelopersHub.ClashOfWhatever {
                 {
                     if (building.transform == hit.transform)
                     {
-                        Debug.Log("Building name is : " + building.name);
-                        Player.instance.TalkSet.SetActive(true);
-                        Player.instance.TalkPanel.text = "에 대한 정보를 보여줍니다.";
+                        string description;
+                        if (Player.instance.GetNextDescription(building.name, out description))
+                        {
+                            Player.instance.TalkSet.SetActive(true);
+                            Player.instance.TalkPanel.text = description;
+                        }
+                        else
+                        {
+                            // 모든 설명을 다 보여줬으면 패널을 닫음
+                            Player.instance.TalkSet.SetActive(false);
+                        }
                         break;
                     }
                 }

@@ -9,6 +9,7 @@ namespace DevelopersHub.ClashOfWhatever
     using System.IO;
     using System.Text;
     using UnityEditor.ShaderKeywordFilter;
+    using UnityEditor;
     using TMPro;
 
     public class Player : MonoBehaviour
@@ -25,6 +26,103 @@ namespace DevelopersHub.ClashOfWhatever
         private static Player _instance = null;
         public static Player instance {get { return _instance; }}
 
+        // 대화창을 클릭했을 때 다음 설명을 보여주는 함수
+        public void ShowNextDescription() {
+            string description;
+            if (GetNextDescription(currentBuildingName, out description)) {
+                TalkPanel.text = description;
+            } else {
+                TalkSet.SetActive(false);
+            }
+        }
+        
+        // 현재 클릭된 건물의 정보
+        private string currentBuildingName = "";
+        private int currentTalkIndex = 0;  // 현재 대화 인덱스
+
+        // 건물별 설명 텍스트를 저장할 Dictionary
+        private Dictionary<string, string[]> buildingDescriptions = new Dictionary<string, string[]>();
+
+        // 건물 설명 초기화
+        private void InitializeBuildingDescriptions() {
+            CorpData corp = dicCorp[stbd_code];
+            buildingDescriptions["BPS"] = new string[] {
+                "BPS(Book-value Per Share)는 주당순자산가치를 의미해요.",
+                string.Format("{0}의 BPS는 {1}으로 기업의 순자산을 발행주식수인 {2}주를 나눈값 이에요.", corp.CompName, corp.BPS, Util.gf_CommaValue(corp.상장주식수)),
+                string.Format("회사의 부도나 청산이 발생했을 때 1주당 청산가치라고 볼 수 있어요."),
+            };
+            
+            buildingDescriptions["PER"] = new string[] {
+                "PER(Price Earning Ratio)은 주가수익비율을 의미합니다.",
+                "주가를 주당순이익(EPS)으로 나눈 값으로,",
+                "기업의 수익 대비 주가의 수준을 보여줍니다."
+            };
+
+            // 나머지 건물들의 설명도 추가
+            buildingDescriptions["DIV"] = new string[] {
+                "DIV(배당수익률)은 주당 배당금을 주가로 나눈 값입니다.",
+                "기업이 주주에게 지급하는 배당금의 수익률을 나타냅니다."
+            };
+
+            buildingDescriptions["DPS"] = new string[] {
+                "DPS(Dividend Per Share)는 주당배당금을 의미합니다.",
+                "1주당 지급되는 배당금액을 나타냅니다."
+            };
+
+            buildingDescriptions["EPS"] = new string[] {
+                "EPS(Earning Per Share)는 주당순이익을 의미합니다.",
+                "당기순이익을 발행주식수로 나눈 값으로,",
+                "1주당 얼마의 이익을 창출했는지 보여줍니다."
+            };
+
+            buildingDescriptions["PBR"] = new string[] {
+                "PBR(Price Book-value Ratio)은 주가순자산비율을 의미합니다.",
+                "주가를 BPS로 나눈 값으로,",
+                "순자산 대비 주가의 수준을 나타냅니다."
+            };
+
+            buildingDescriptions["상장주식수"] = new string[] {
+                "상장주식수는 주식시장에 상장된 총 주식의 수입니다.",
+                "기업의 전체 가치를 나누는 기준이 됩니다."
+            };
+
+            buildingDescriptions["시가총액"] = new string[] {
+                "시가총액은 기업의 전체 가치를 의미합니다.",
+                "주가와 상장주식수를 곱한 값으로,",
+                "기업의 실질적인 시장가치를 나타냅니다."
+            };
+
+            buildingDescriptions["인력정보"] = new string[] {
+                "해당 기업의 인력 현황을 보여줍니다.",
+                "총 직원 수와 평균 근속연수 등의",
+                "상세한 인력 정보를 확인할 수 있습니다."
+            };
+        }
+
+        // 다음 설명 텍스트 가져오기
+        public bool GetNextDescription(string buildingName, out string description) {
+            description = "";
+            
+            // 처음 클릭한 건물이거나 다른 건물을 클릭한 경우
+            if (buildingName != currentBuildingName) {
+                currentBuildingName = buildingName;
+                currentTalkIndex = 0;
+            }
+
+            // 해당 건물의 설명이 있는지 확인
+            if (buildingDescriptions.ContainsKey(buildingName) &&
+                currentTalkIndex < buildingDescriptions[buildingName].Length)
+            {
+                description = buildingDescriptions[buildingName][currentTalkIndex];
+                currentTalkIndex++;
+                return true;
+            }
+
+            // 모든 설명을 다 보여줬거나 설명이 없는 경우
+            currentTalkIndex = 0;
+            return false;
+        }
+
 
         public enum RequestsID {
             AUTH = 1, SYNC = 2, BUILD = 3
@@ -37,14 +135,83 @@ namespace DevelopersHub.ClashOfWhatever
             RealtimeNetworking.OnPacketReceived += ReceivedPacket;
             ReadCSV();
             ConnectToServer();
+            InitializeBuildingDescriptions();  // 건물 설명 초기화
             InitData();
+
+            // TalkSet에 Button 컴포넌트 추가
+            if (!TalkSet.GetComponent<UnityEngine.UI.Button>()) {
+                UnityEngine.UI.Button button = TalkSet.AddComponent<UnityEngine.UI.Button>();
+                button.onClick.AddListener(() => ShowNextDescription());
+            }
         }
 
+        private string[] buildingPurposes = {
+            "BPS", "DIV", "DPS", "EPS", "PBR", "PER", "상장주식수","시가총액", "인력정보"
+        };
+        
+        [SerializeField] private TMP_FontAsset buildingFont = null;
+
         private void InitData() {
-            // #1 buildingList init. 
-            for (int i = 0 ; i < buildings.transform.childCount ; i ++ ) {
+            // 랜덤 색상을 위한 색상 배열 정의
+            Color[] buildingColors = new Color[] {
+                new Color(1f, 0.5f, 0.5f),  // 연한 빨강
+                new Color(0.5f, 1f, 0.5f),  // 연한 초록
+                new Color(0.5f, 0.5f, 1f),  // 연한 파랑
+                new Color(1f, 1f, 0.5f),    // 연한 노랑
+                new Color(1f, 0.5f, 1f)     // 연한 보라
+            };
+
+            // #1 buildingList init
+            for (int i = 0; i < buildings.transform.childCount; i++) {
                 GameObject _smallBuilding = buildings.transform.GetChild(i).gameObject;
                 _smallBuilding.AddComponent<MyClickControls>();
+                
+                // 모든 자식 렌더러 컴포넌트 가져오기
+                Renderer[] renderers = _smallBuilding.GetComponentsInChildren<Renderer>();
+                foreach (Renderer renderer in renderers) {
+                    Material newMaterial = new Material(renderer.material);
+                    // newMaterial.color = buildingColors[i % buildingColors.Length];
+                    renderer.material = newMaterial;
+                }
+
+                // 건물 위에 간판(TextMesh Pro) 추가
+                GameObject signObject = new GameObject("BuildingSign");
+                signObject.transform.SetParent(_smallBuilding.transform);
+                
+                // 건물 위에 적절한 위치로 설정 (건물의 높이를 고려)
+                Renderer buildingRenderer = _smallBuilding.GetComponent<Renderer>();
+                float buildingHeight = buildingRenderer != null ? buildingRenderer.bounds.size.y : 2f;
+                buildingHeight = buildingHeight / _smallBuilding.GetComponent<Renderer>().transform.localScale.y;
+                signObject.transform.localPosition = new Vector3(0, buildingHeight + 1.0f, 0);
+                
+
+                // 텍스트가 카메라를 향하도록 회전 (빌보드 효과)
+                signObject.transform.rotation = Quaternion.Euler(45, 45, 0);
+                
+                // 텍스트 크기 조정을 위한 스케일 설정 (너비 2배)
+                signObject.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+                
+
+                // TextMeshPro 컴포넌트 추가 및 설정
+                TextMeshPro signText = signObject.AddComponent<TextMeshPro>();
+                signText.text = buildingPurposes[i % buildingPurposes.Length];
+                signText.fontSize = 70f;
+                signText.alignment = TextAlignmentOptions.Center;
+                signText.rectTransform.sizeDelta = new Vector2(40f, 10f);  // 텍스트 영역의 너비를 늘림
+                signText.color = Color.white;
+                
+                // 텍스트가 잘 보이도록 설정
+                signText.outlineWidth = 0.2f;
+                signText.outlineColor = Color.black;
+
+                // Noto Sans 폰트 설정
+                if (buildingFont != null) {
+                    signText.font = buildingFont;
+                } else {
+                    Debug.LogError("Noto Sans 폰트를 찾을 수 없습니다!");
+                }
+                
+                _smallBuilding.name = buildingPurposes[i % buildingPurposes.Length];
                 _buildingList.Add(_smallBuilding);
             }
         }
