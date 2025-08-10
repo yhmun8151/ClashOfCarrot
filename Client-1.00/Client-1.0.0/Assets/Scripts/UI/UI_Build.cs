@@ -28,8 +28,8 @@ namespace DevelopersHub.ClashOfWhatever {
         
         void Update()
         {
-            if (Building.instance != null && CameraController.instance.isPlaceBuilding) {
-                Vector3 end = UI_Main.instance._grid.GetEndPosition(Building.instance);
+            if (Building.buildInstance != null && CameraController.instance.isPlaceBuilding) {
+                Vector3 end = UI_Main.instance._grid.GetEndPosition(Building.buildInstance);
                 
                 Vector3 planDownLeft = CameraController.instance.CameraScreenPositionToPlanePosition(Vector2.zero);
                 Vector3 planTopRight = CameraController.instance.CameraScreenPositionToPlanePosition(new Vector2(Screen.width, Screen.height));
@@ -56,13 +56,13 @@ namespace DevelopersHub.ClashOfWhatever {
         }
 
         private void Confirm() {
-            if(Building.instance != null && UI_Main.instance._grid.CanPlaceBuilding(Building.instance, Building.instance.currentX, Building.instance.currentY)) {
+            if(Building.buildInstance != null && UI_Main.instance._grid.CanPlaceBuilding(Building.buildInstance, Building.buildInstance.currentX, Building.buildInstance.currentY)) {
                 Packet packet = new Packet();
                 packet.Write((int)Player.RequestsID.BUILD);
                 packet.Write(SystemInfo.deviceUniqueIdentifier);
-                packet.Write(Building.instance.id);
-                packet.Write(Building.instance.currentX);
-                packet.Write(Building.instance.currentY);
+                packet.Write(Building.buildInstance.id);
+                packet.Write(Building.buildInstance.currentX);
+                packet.Write(Building.buildInstance.currentY);
                 // send requests to server 
                 Sender.TCP_Send(packet);
                 Cancel();
@@ -70,9 +70,9 @@ namespace DevelopersHub.ClashOfWhatever {
         }
         
         public void Cancel() {
-            if (Building.instance != null) {
+            if (Building.buildInstance != null) {
                 CameraController.instance.isPlaceBuilding = false;
-                Building.instance.RemovedFromGrid();
+                Building.buildInstance.RemovedFromGrid();
             }
         }
     }

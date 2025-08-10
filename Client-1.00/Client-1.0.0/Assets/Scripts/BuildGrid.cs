@@ -39,7 +39,7 @@ namespace DevelopersHub.ClashOfWhatever {
         }
 
         public bool IsWorldPositionIsOnPlane(Vector3 position, int x, int y, int rows, int columns) {
-            position = transform.InverseTransformPoint(position);
+            // position = transform.InverseTransformPoint(position);
             Rect rect = new Rect(x, y, columns, rows);
             if (rect.Contains(new Vector2(position.x, position.z)))
             {

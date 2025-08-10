@@ -9,6 +9,7 @@ namespace DevelopersHub.ClashOfWhatever
     using System.IO;
     using System.Text;
     using UnityEditor.ShaderKeywordFilter;
+    using TMPro;
 
     public class Player : MonoBehaviour
     {
@@ -16,17 +17,36 @@ namespace DevelopersHub.ClashOfWhatever
         // key(메뉴명)로 value를 뽑아오기 위해
         // 원하는 형태로 선언해도 무방
         Dictionary<string, CorpData> dicCorp = new Dictionary<string, CorpData>(); // 상품명 : menu(상품 이름, 가격, 정보)
-        [SerializeField]
-        String stbd_code = "005930"; // 기본값은 삼성전자 
+        [SerializeField] String stbd_code = "005930"; // 기본값은 삼성전자 
+        [SerializeField] GameObject buildings;
+        [SerializeField] public GameObject TalkSet;
+        [SerializeField] public TextMeshProUGUI TalkPanel;
+        public List<GameObject> _buildingList = new List<GameObject>();
+        private static Player _instance = null;
+        public static Player instance {get { return _instance; }}
+
 
         public enum RequestsID {
             AUTH = 1, SYNC = 2, BUILD = 3
+        }
+        void Awake() {
+            _instance = this;
         }
         void Start()
         {
             RealtimeNetworking.OnPacketReceived += ReceivedPacket;
             ReadCSV();
             ConnectToServer();
+            InitData();
+        }
+
+        private void InitData() {
+            // #1 buildingList init. 
+            for (int i = 0 ; i < buildings.transform.childCount ; i ++ ) {
+                GameObject _smallBuilding = buildings.transform.GetChild(i).gameObject;
+                _smallBuilding.AddComponent<MyClickControls>();
+                _buildingList.Add(_smallBuilding);
+            }
         }
 
         private void ReceivedLong(int id, long value) {

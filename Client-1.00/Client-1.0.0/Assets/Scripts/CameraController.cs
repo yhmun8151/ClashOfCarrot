@@ -3,6 +3,8 @@ namespace DevelopersHub.ClashOfWhatever {
     using Unity.VisualScripting;
     using UnityEngine;
     using UnityEngine.UIElements;
+    using UnityEngine.EventSystems;
+    using System.Collections.Generic;
 
     public class CameraController : MonoBehaviour
     {
@@ -88,25 +90,65 @@ namespace DevelopersHub.ClashOfWhatever {
             _inputs.Main.Move.canceled += _ => MoveCanceled(); 
             _inputs.Main.TouchZoom.started += _ => ZoomStarted(); 
             _inputs.Main.TouchZoom.canceled += _ => ZoomCanceled(); 
+            _inputs.Main.PointerClick.performed += _ => ScreenClicked(); 
         }
 
         void OnDisable()
         {
-            _inputs.Disable();
             _inputs.Main.Move.started -= _ => MoveStarted(); 
             _inputs.Main.Move.canceled -= _ => MoveCanceled(); 
             _inputs.Main.TouchZoom.started -= _ => ZoomStarted(); 
             _inputs.Main.TouchZoom.canceled -= _ => ZoomCanceled(); 
+            _inputs.Main.PointerClick.performed -= _ => ScreenClicked(); 
+            _inputs.Disable();
         }
+
+        private void ScreenClicked() {
+            Vector2 position = _inputs.Main.PointerPosition.ReadValue<Vector2>();
+
+            // 마우스로 찍은 위치의 좌표 값을 가져온다
+            Ray ray = _camera.ScreenPointToRay(position);
+             //RaycastHit 선언
+            RaycastHit hit;
+
+            //Physics.Raycast(Ray 원점, Ray 방향, 충돌 감지할 RaycastHit, Ray 거리(길이))
+            //맨 마지막에 있는 Ray 거리(길이)를 넣지 않아도 되는데, 넣지 않으면 무제한으로 나아감
+            //아래 코드를 봤을때는 방향 생략가능한 것으로 보여짐
+
+            if (Physics.Raycast(ray, out hit, 10000f))
+            {
+                Debug.Log(hit.transform.name + " is clicked at position: " + hit.point);
+
+                foreach (GameObject building in Player.instance._buildingList)
+                {
+                    if (building.transform == hit.transform)
+                    {
+                        Debug.Log("Building name is : " + building.name);
+                        Player.instance.TalkSet.SetActive(true);
+                        Player.instance.TalkPanel.text = "에 대한 정보를 보여줍니다.";
+                        break;
+                    }
+                }
+            }
+        }
+
+        public bool IsScreenPointOverUI(Vector2 position) {
+            PointerEventData data = new PointerEventData(EventSystem.current);
+            data.position = position;
+            List<RaycastResult> results = new List<RaycastResult>();
+            EventSystem.current.RaycastAll(data, results);
+            return results.Count > 0;
+        }
+
         private void MoveStarted() {
             // zinyoung 0729
             if (UI_Main.instance.isActive) {
                 if (_building) {
                     _buildBasePosition = CameraScreenPositionToPlanePosition(_inputs.Main.PointerPosition.ReadValue<Vector2>());
-                    if (UI_Main.instance._grid.IsWorldPositionIsOnPlane(_buildBasePosition, Building.instance.currentX, Building.instance.currentY, Building.instance.rows, Building.instance.columns)) {
-                        Building.instance.StartMovingOnGrid();
+                    if (UI_Main.instance._grid.IsWorldPositionIsOnPlane(_buildBasePosition, Building.buildInstance.currentX, Building.buildInstance.currentY, Building.buildInstance.rows, Building.buildInstance.columns)) {
+                        Building.buildInstance.StartMovingOnGrid();
                         _movingBuilding = true;
-                    } 
+                    }
                 }
                 if (_movingBuilding == false) {
                     _moving = true;
@@ -186,7 +228,7 @@ namespace DevelopersHub.ClashOfWhatever {
 
             if (_building && _movingBuilding) {
                 Vector3 pos = CameraScreenPositionToPlanePosition(_inputs.Main.PointerPosition.ReadValue<Vector2>());
-                Building.instance.UpdateGridPosition(_buildBasePosition, pos);
+                Building.buildInstance.UpdateGridPosition(_buildBasePosition, pos);
             }
         }
 

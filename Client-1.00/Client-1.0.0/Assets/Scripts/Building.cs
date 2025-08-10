@@ -4,14 +4,13 @@ namespace DevelopersHub.ClashOfWhatever{
     public class Building : MonoBehaviour
     {
         public string id = "";
-        private static Building _instance = null;
-        public static Building instance {get { return _instance; } set {_instance = value;}}
+        private static Building _buildInstance = null; public static Building buildInstance {get { return _buildInstance; } set {_buildInstance = value;}}
+        private static Building _selectedInstance = null; public static Building selectedInstance {get { return _selectedInstance; } set {_selectedInstance = value;}}
         [System.Serializable] public class Level{
             public int level = 1;
             public Sprite icon = null;
             public GameObject mesh = null;
         }
-        private BuildGrid _grid = null;
 
         [SerializeField] private long _databaseID = 1; public long databaseID { get { return _databaseID; } set { _databaseID = value; } }
         [SerializeField] private int _rows = 1; public int rows { get { return _rows; } }
@@ -40,7 +39,7 @@ namespace DevelopersHub.ClashOfWhatever{
         }
 
         public void RemovedFromGrid() {
-            _instance = null;
+            _buildInstance = null;
             UI_Build.instance.SetStatus(false);
             CameraController.instance.isPlaceBuilding = false;
             Destroy(gameObject);
@@ -71,5 +70,23 @@ namespace DevelopersHub.ClashOfWhatever{
                 _baseArea.sharedMaterial.color = Color.red;
             }
         }
+
+        public void Selected() {
+            if (selectedInstance != null) {
+                if (selectedInstance == this) 
+                {
+                    return;
+                }
+                else 
+                {
+                    selectedInstance.Deselected();
+                }
+            }
+        }
+
+        public void Deselected() {
+
+        }
+        
     }
 }
