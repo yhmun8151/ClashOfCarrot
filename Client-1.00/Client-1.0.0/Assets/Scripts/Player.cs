@@ -11,6 +11,7 @@ namespace DevelopersHub.ClashOfWhatever
     using UnityEditor.ShaderKeywordFilter;
     using UnityEditor;
     using TMPro;
+    using System.Linq; // LINQ 추가
 
     public class Player : MonoBehaviour
     {
@@ -25,6 +26,15 @@ namespace DevelopersHub.ClashOfWhatever
         public List<GameObject> _buildingList = new List<GameObject>();
         private static Player _instance = null;
         public static Player instance {get { return _instance; }}
+
+        // 검색 UI 관련 변수들
+        [SerializeField] private TextMeshProUGUI TitleText; // 제목 텍스트
+        [SerializeField] private GameObject searchButton; // 돋보기 버튼
+        [SerializeField] private GameObject searchPanel; // 검색 패널
+        [SerializeField] private TMP_InputField searchInput; // 검색 입력 필드
+        [SerializeField] private RectTransform suggestionsPanel; // 검색 제안 패널
+        [SerializeField] private GameObject suggestionPrefab; // 검색 제안 항목 프리팹
+        private List<GameObject> currentSuggestions = new List<GameObject>();
 
         // 대화창을 클릭했을 때 다음 설명을 보여주는 함수
         public void ShowNextDescription() {
@@ -44,8 +54,161 @@ namespace DevelopersHub.ClashOfWhatever
         private Dictionary<string, string[]> buildingDescriptions = new Dictionary<string, string[]>();
 
         // 건물 설명 초기화
+        // 검색 UI 초기화 및 이벤트 설정
+        private void InitializeSearchUI() {
+            // 돋보기 버튼 클릭 이벤트
+            searchButton.GetComponent<UnityEngine.UI.Button>().onClick.AddListener(() => {
+                searchPanel.SetActive(!searchPanel.activeSelf);
+                if (searchPanel.activeSelf) {
+                    searchInput.text = "";
+                    UpdateSuggestions("");
+                }
+            });
+
+            // 검색 입력 이벤트
+            searchInput.onValueChanged.AddListener((value) => {
+                UpdateSuggestions(value);
+            });
+
+            // 초기에는 검색 패널 숨기기
+            searchPanel.SetActive(false);
+        }
+
+        // 검색 제안 업데이트
+        private void UpdateSuggestions(string searchText)
+        {
+            // 기존 제안 항목들 제거
+            foreach (var suggestion in currentSuggestions)
+            {
+                Destroy(suggestion);
+            }
+            currentSuggestions.Clear();
+
+            if (string.IsNullOrEmpty(searchText))
+            {
+                suggestionsPanel.gameObject.SetActive(false);
+                return;
+            }
+
+            suggestionsPanel.gameObject.SetActive(true);
+            searchText = searchText.ToLower();
+
+            // 검색어와 일치하는 기업 찾기
+            var matches = dicCorp.Values
+                .Where(corp => corp.CompName.ToLower().Contains(searchText) ||
+                             corp.Ticker.ToLower().Contains(searchText))
+                .Take(5); // 최대 5개까지만 표시
+
+            foreach (var corp in matches)
+            {
+                var suggestionObj = Instantiate(suggestionPrefab, suggestionsPanel);
+                var suggestionText = suggestionObj.GetComponentInChildren<TextMeshProUGUI>();
+                suggestionText.text = $"{corp.CompName} ({corp.Ticker})";
+
+                // Button 컴포넌트 확인 및 추가
+                var button = suggestionObj.GetComponent<UnityEngine.UI.Button>();
+                if (button == null)
+                {
+                    // Button이 없으면 추가
+                    button = suggestionObj.AddComponent<UnityEngine.UI.Button>();
+                }
+
+                // 현재 스코프의 corp 변수를 캡처하기 위해 임시 변수 사용
+                var currentCorp = corp;
+                button.onClick.AddListener(() => {
+                    SelectCompany(currentCorp.Ticker);
+                });
+
+                currentSuggestions.Add(suggestionObj);
+            }
+        }
+
+        // 기업 선택 시 처리
+        private void SelectCompany(string ticker) {
+            Debug.Log($"SelectCompany called with ticker: {ticker} ");
+            // 선택한 기업의 정보를 가져와서 UI 업데이트
+            if (!dicCorp.ContainsKey(ticker)) {
+                Debug.LogWarning($"Ticker {ticker} not found in corp data.");
+                return;
+            }
+            stbd_code = ticker;
+            StartCoroutine(TransitionToNewCompany()); // 전환 효과 시작
+            InitializeBuildingDescriptions(); // 건물 설명 업데이트
+            searchPanel.SetActive(false);
+        }
+
+        private IEnumerator TransitionToNewCompany() {
+            // 모든 건물들을 위로 올라가게 하는 애니메이션
+            foreach (GameObject building in _buildingList) {
+                StartCoroutine(AnimateBuilding(building, true));
+            }
+            
+            yield return new WaitForSeconds(1f); // 건물이 사라지는 동안 대기
+            
+            // 건물들의 새로운 위치 계산 및 재배치
+            // ShuffleBuildings();
+            
+            // 건물들을 아래로 내려오게 하는 애니메이션
+            foreach (GameObject building in _buildingList) {
+                StartCoroutine(AnimateBuilding(building, false));
+            }
+        }
+
+        private void ShuffleBuildings() {
+            // 현재 건물들의 위치를 저장
+            List<Vector3> originalPositions = _buildingList.Select(b => b.transform.position).ToList();
+            List<Quaternion> originalRotations = _buildingList.Select(b => b.transform.rotation).ToList();
+            
+            // Fisher-Yates 알고리즘을 사용하여 위치를 셔플
+            System.Random rnd = new System.Random();
+            for (int i = originalPositions.Count - 1; i > 0; i--) {
+                int randomIndex = rnd.Next(0, i + 1);
+                
+                // 위치 교환
+                Vector3 tempPos = originalPositions[i];
+                originalPositions[i] = originalPositions[randomIndex];
+                originalPositions[randomIndex] = tempPos;
+                
+                // 회전 교환
+                Quaternion tempRot = originalRotations[i];
+                originalRotations[i] = originalRotations[randomIndex];
+                originalRotations[randomIndex] = tempRot;
+            }
+            
+            // 셔플된 위치로 건물들 이동
+            for (int i = 0; i < _buildingList.Count; i++) {
+                _buildingList[i].transform.position = new Vector3(
+                    originalPositions[i].x,
+                    0, // y 좌표는 항상 0으로 유지
+                    originalPositions[i].z
+                );
+                _buildingList[i].transform.rotation = originalRotations[i];
+            }
+        }
+
+        private IEnumerator AnimateBuilding(GameObject building, bool goingUp) {
+            float duration = 0.5f;
+            float elapsedTime = 0f;
+            Vector3 startPos = building.transform.position;
+            Vector3 endPos = goingUp ? 
+                startPos + Vector3.up * 10f : // 위로 올라갈 때
+                new Vector3(startPos.x, 0f, startPos.z); // 아래로 내려올 때
+
+            while (elapsedTime < duration) {
+                elapsedTime += Time.deltaTime;
+                float progress = elapsedTime / duration;
+                progress = goingUp ? Mathf.Sin(progress * Mathf.PI * 0.5f) : 1f - Mathf.Cos(progress * Mathf.PI * 0.5f);
+                
+                building.transform.position = Vector3.Lerp(startPos, endPos, progress);
+                yield return null;
+            }
+            
+            building.transform.position = endPos;
+        }
+
         private void InitializeBuildingDescriptions() {
             CorpData corp = dicCorp[stbd_code];
+            TitleText.text = $"{corp.CompName} ({corp.Ticker}) 기준가 : {Util.gf_CommaValue(corp.종가)}";
             buildingDescriptions["BPS"] = new string[] {
                 "BPS(Book-value Per Share)는 주당순자산가치를 의미해요.",
                 string.Format("{0}의 BPS는 {1}으로 기업의 순자산을 발행주식수인 {2}주를 나눈값 이에요.", corp.CompName, corp.BPS, Util.gf_CommaValue(corp.상장주식수)),
@@ -134,9 +297,9 @@ namespace DevelopersHub.ClashOfWhatever
         {
             RealtimeNetworking.OnPacketReceived += ReceivedPacket;
             ReadCSV();
-            ConnectToServer();
             InitializeBuildingDescriptions();  // 건물 설명 초기화
             InitData();
+            InitializeSearchUI();  // 검색 UI 초기화
 
             // TalkSet에 Button 컴포넌트 추가
             if (!TalkSet.GetComponent<UnityEngine.UI.Button>()) {
@@ -375,43 +538,12 @@ namespace DevelopersHub.ClashOfWhatever
                 // 이렇게 해두면 dicCorp.Add("005930");로 corp.시가총액, corp.PER .. 접근 가능
                 dicCorp.Add(corp.Ticker, corp);
             }
-            SyncData_CSV();
         }
 
         public class CorpData
         {
             // Ticker,BPS,DIV,DPS,EPS,PBR,PER,거래대금,거래량,고가,등락률,상장주식수,시가,시가총액,저가,종가,dart_data,dart_code
             public String Ticker,CompName,BPS,DIV,DPS,EPS,PBR,PER,거래대금,거래량,고가,등락률,상장주식수,시가,시가총액,저가,종가,dart_data,dart_code;
-        }
-
-        private void SyncData_CSV() {
-            Debug.Log("SyncData is called");
-            if (dicCorp[stbd_code] != null) {
-                CorpData corp = dicCorp[stbd_code];
-                Debug.Log(corp.CompName);
-            }
-            // UI_Main.instance._goldText.text = player.gold.ToString();
-            // UI_Main.instance._elixerText.text = player.elixir.ToString();
-            // UI_Main.instance._gemsText.text = player.gems.ToString();
-            // if(player.buildings != null && player.buildings.Count > 0) {
-            //     for (int i = 0 ; i < player.buildings.Count; i++) {
-            //         Building building = UI_Main.instance._grid.GetBuilding(player.buildings[i].databaseID);
-            //         if (building != null) {
-                        
-            //         } else {
-            //             Building prefab = UI_Main.instance.GetBuildingPrefab(player.buildings[i].id);
-            //             if (prefab) {
-            //                 Building b = Instantiate(prefab, Vector3.zero, Quaternion.identity);
-
-            //                 b.PlacedOnGrid(player.buildings[i].x, player.buildings[i].y);
-            //                 b._baseArea.gameObject.SetActive(false);
-
-            //                 UI_Main.instance._grid.buildings.Add(b);
-            //             }
-            //         }
-            //     }
-            // }
-        }
-        
+        }        
     }
 }

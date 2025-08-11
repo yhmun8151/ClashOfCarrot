@@ -104,16 +104,16 @@ namespace DevelopersHub.ClashOfWhatever {
         }
 
         private void ScreenClicked() {
-            Vector2 position = _inputs.Main.PointerPosition.ReadValue<Vector2>();
+            // UI 요소가 클릭되었는지 확인
+            if (EventSystem.current.IsPointerOverGameObject())
+            {
+                return; // UI가 클릭된 경우 맵 클릭 처리를 하지 않음
+            }
 
-            // 마우스로 찍은 위치의 좌표 값을 가져온다
+            Vector2 position = _inputs.Main.PointerPosition.ReadValue<Vector2>();
             Ray ray = _camera.ScreenPointToRay(position);
-             //RaycastHit 선언
             RaycastHit hit;
 
-            //Physics.Raycast(Ray 원점, Ray 방향, 충돌 감지할 RaycastHit, Ray 거리(길이))
-            //맨 마지막에 있는 Ray 거리(길이)를 넣지 않아도 되는데, 넣지 않으면 무제한으로 나아감
-            //아래 코드를 봤을때는 방향 생략가능한 것으로 보여짐
 
             if (Physics.Raycast(ray, out hit, 10000f))
             {
