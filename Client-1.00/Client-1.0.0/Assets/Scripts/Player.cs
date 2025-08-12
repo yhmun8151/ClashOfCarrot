@@ -192,7 +192,7 @@ namespace DevelopersHub.ClashOfWhatever
             Vector3 startPos = building.transform.position;
             Vector3 endPos = goingUp ? 
                 startPos + Vector3.up * 10f : // 위로 올라갈 때
-                new Vector3(startPos.x, 0f, startPos.z); // 아래로 내려올 때
+                new Vector3(startPos.x, 3f, startPos.z); // 아래로 내려올 때
 
             while (elapsedTime < duration) {
                 elapsedTime += Time.deltaTime;
@@ -395,11 +395,7 @@ namespace DevelopersHub.ClashOfWhatever
                     long accountID = packet.ReadLong();
                     SendSyncRequests();
                     break;
-                case RequestsID.SYNC:
-                    string playerData = packet.ReadString();
-                    Data.Player playerSyncData = Data.Desrialize<Data.Player>(playerData);
-                    SyncData(playerSyncData);
-                    break;
+                    
                 case RequestsID.BUILD:
                     int response = packet.ReadInt();
                     switch (response) {
@@ -423,31 +419,6 @@ namespace DevelopersHub.ClashOfWhatever
             p.Write((int)RequestsID.SYNC);
             p.Write(SystemInfo.deviceUniqueIdentifier);
             Sender.TCP_Send(p);
-        }
-
-        private void SyncData(Data.Player player) {
-            Debug.Log("SyncData is called");
-            UI_Main.instance._goldText.text = player.gold.ToString();
-            UI_Main.instance._elixerText.text = player.elixir.ToString();
-            UI_Main.instance._gemsText.text = player.gems.ToString();
-            if(player.buildings != null && player.buildings.Count > 0) {
-                for (int i = 0 ; i < player.buildings.Count; i++) {
-                    Building building = UI_Main.instance._grid.GetBuilding(player.buildings[i].databaseID);
-                    if (building != null) {
-                        
-                    } else {
-                        Building prefab = UI_Main.instance.GetBuildingPrefab(player.buildings[i].id);
-                        if (prefab) {
-                            Building b = Instantiate(prefab, Vector3.zero, Quaternion.identity);
-
-                            b.PlacedOnGrid(player.buildings[i].x, player.buildings[i].y);
-                            b._baseArea.gameObject.SetActive(false);
-
-                            UI_Main.instance._grid.buildings.Add(b);
-                        }
-                    }
-                }
-            }
         }
 
         private void ConnectionResponse(bool successful) {

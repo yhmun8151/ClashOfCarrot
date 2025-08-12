@@ -15,7 +15,7 @@ namespace DevelopersHub.ClashOfWhatever {
         [SerializeField] private float _moveSpeed = 400;
         [SerializeField] private float _moveSmooth = 5;
         [SerializeField] private float _zoomSmooth = 5;
-        [SerializeField] private float _zoomSpeed = 5f;
+        [SerializeField] private float _zoomSpeed = 10f; // 줌 속도 증가
         private Controls _inputs = null;
         private bool _zooming = false;
         private bool _moving = false;
@@ -52,7 +52,7 @@ namespace DevelopersHub.ClashOfWhatever {
         
         void Start()
         {
-            Initialize(Vector3.zero, 40, 40, 40, 40, 45, 15, 5, 20);
+            Initialize(Vector3.zero, 60, 60, 60, 60, 45, 15, 3, 30); // 카메라 범위 확장 및 줌 범위 조정
         }
 
         private void Initialize(Vector3 center, float right, float left, float up, float down, float angle, float zoom, float zoomMin, float zoomMax) {
@@ -149,41 +149,31 @@ namespace DevelopersHub.ClashOfWhatever {
         }
 
         private void MoveStarted() {
-            // zinyoung 0729
-            if (UI_Main.instance.isActive) {
-                if (_building) {
-                    _buildBasePosition = CameraScreenPositionToPlanePosition(_inputs.Main.PointerPosition.ReadValue<Vector2>());
-                    if (UI_Main.instance._grid.IsWorldPositionIsOnPlane(_buildBasePosition, Building.buildInstance.currentX, Building.buildInstance.currentY, Building.buildInstance.rows, Building.buildInstance.columns)) {
-                        Building.buildInstance.StartMovingOnGrid();
-                        _movingBuilding = true;
-                    }
-                }
-                if (_movingBuilding == false) {
-                    _moving = true;
-                }
+            if (_movingBuilding == false) {
+                _moving = true;
             }
         }
         private void MoveCanceled() {
             _moving = false;
             _movingBuilding = false;
         }
-        private void ZoomStarted() {
-            if (UI_Main.instance.isActive) {
-                Vector2 touch0 = _inputs.Main.TouchPosition0.ReadValue<Vector2>();
-                Vector2 touch1 = _inputs.Main.TouchPosition1.ReadValue<Vector2>();
-                _zoomPositionOnScreen = Vector2.Lerp(touch0, touch1, 0.5f);
-                _zoomPositionInWorld = CameraScreenPositionToPlanePosition(_zoomPositionOnScreen);
-                _zoomBaseValue = _zoom;
+        private void ZoomStarted()
+        {
+        
+            Vector2 touch0 = _inputs.Main.TouchPosition0.ReadValue<Vector2>();
+            Vector2 touch1 = _inputs.Main.TouchPosition1.ReadValue<Vector2>();
+            _zoomPositionOnScreen = Vector2.Lerp(touch0, touch1, 0.5f);
+            _zoomPositionInWorld = CameraScreenPositionToPlanePosition(_zoomPositionOnScreen);
+            _zoomBaseValue = _zoom;
 
-                touch0.x /= Screen.width;
-                touch1.x /= Screen.width;
-                touch0.y /= Screen.height;
-                touch1.y /= Screen.height;
+            touch0.x /= Screen.width;
+            touch1.x /= Screen.width;
+            touch0.y /= Screen.height;
+            touch1.y /= Screen.height;
 
-                _zoomBaseDistance = Vector2.Distance(touch0, touch1);
+            _zoomBaseDistance = Vector2.Distance(touch0, touch1);
 
-                _zooming = true;
-            }
+            _zooming = true;
         }
         private void ZoomCanceled() {
             _zooming = false;
@@ -193,9 +183,9 @@ namespace DevelopersHub.ClashOfWhatever {
             if (Input.touchSupported == false) {
                 float mouseScroll = _inputs.Main.MouseScroll.ReadValue<float>();
                 if (mouseScroll > 0) {
-                    _zoom -= 3f * Time.deltaTime;
+                    _zoom -= 5f * Time.deltaTime; // 마우스 휠 줌 속도 증가
                 } else if (mouseScroll < 0) {
-                    _zoom += 3f * Time.deltaTime;
+                    _zoom += 5f * Time.deltaTime;
                 }
             }
             if (_zooming) {
@@ -232,11 +222,6 @@ namespace DevelopersHub.ClashOfWhatever {
             }
             if (_camera.transform.rotation != _target.rotation) {
                 _camera.transform.rotation = _target.rotation;
-            }
-
-            if (_building && _movingBuilding) {
-                Vector3 pos = CameraScreenPositionToPlanePosition(_inputs.Main.PointerPosition.ReadValue<Vector2>());
-                Building.buildInstance.UpdateGridPosition(_buildBasePosition, pos);
             }
         }
 
