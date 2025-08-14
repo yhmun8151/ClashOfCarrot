@@ -128,6 +128,7 @@ namespace DevelopersHub.ClashOfWhatever {
                         {
                             Player.instance.TalkSet.SetActive(true);
                             Player.instance.TalkPanel.text = description;
+                            Player.instance.ShowBuildingInfo(building.name); // 정보 패널 업데이트
                         }
                         else
                         {
