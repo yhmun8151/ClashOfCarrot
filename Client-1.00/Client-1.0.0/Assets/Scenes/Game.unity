@@ -16693,7 +16693,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _camera: {fileID: 969136869}
-  _moveSpeed: 400
+  _moveSpeed: 50
   _moveSmooth: 5
   _zoomSmooth: 5
   _zoomSpeed: 10

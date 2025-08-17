@@ -1,17 +1,16 @@
 namespace DevelopersHub.ClashOfWhatever
 {
     using UnityEngine;
-    using DevelopersHub.RealtimeNetworking.Client;
+    using UnityEngine.Networking;
     using System.Collections;
     using System.Collections.Generic;
     using System;
     using Unity.VisualScripting;
     using System.IO;
     using System.Text;
-    using UnityEditor.ShaderKeywordFilter;
-    using UnityEditor;
     using TMPro;
     using System.Linq; // LINQ 추가
+    using System.Threading.Tasks;
 
     public class Player : MonoBehaviour
     {
@@ -25,7 +24,7 @@ namespace DevelopersHub.ClashOfWhatever
         [SerializeField] public TextMeshProUGUI TalkPanel;
         public List<GameObject> _buildingList = new List<GameObject>();
         private static Player _instance = null;
-        public static Player instance {get { return _instance; }}
+        public static Player instance { get { return _instance; } }
 
         // 검색 UI 관련 변수들
         [SerializeField] private TextMeshProUGUI TitleText; // 제목 텍스트
@@ -38,30 +37,38 @@ namespace DevelopersHub.ClashOfWhatever
         [SerializeField] private GameObject suggestionPrefab; // 검색 제안 항목 프리팹
         private List<GameObject> currentSuggestions = new List<GameObject>();
 
-                        // 대화창을 클릭했을 때 다음 설명을 보여주는 함수
-        public void ShowNextDescription() {
+        // 대화창을 클릭했을 때 다음 설명을 보여주는 함수
+        public void ShowNextDescription()
+        {
             string description;
-            if (GetNextDescription(currentBuildingName, out description)) {
+            if (GetNextDescription(currentBuildingName, out description))
+            {
                 TalkPanel.text = description;
                 ShowBuildingInfo(currentBuildingName); // 정보 패널 업데이트
-            } else {
+            }
+            else
+            {
                 TalkSet.SetActive(false);
-                if (TalkSet_infoBackground != null) {
+                if (TalkSet_infoBackground != null)
+                {
                     TalkSet_infoBackground.SetActive(false);
                 }
             }
         }
 
-        public void ShowBuildingInfo(string buildingName) {
-            if (string.IsNullOrEmpty(buildingName) || TalkSet_infoPanel == null) {
+        public async Task ShowBuildingInfo(string buildingName)
+        {
+            if (string.IsNullOrEmpty(buildingName) || TalkSet_infoPanel == null)
+            {
                 TalkSet_infoPanel.text = "";
-                if (TalkSet_infoBackground != null) {
+                if (TalkSet_infoBackground != null)
+                {
                     TalkSet_infoBackground.SetActive(false);
                 }
                 return;
             }
 
-            CorpData corp = dicCorp[g_stbd_code];
+            CorpData corp = await GetCorpData(g_stbd_code);
             StringBuilder sb = new StringBuilder();
 
             if (buildingName.Contains("Plane_Field"))
@@ -125,9 +132,10 @@ namespace DevelopersHub.ClashOfWhatever
                     sb.Append($"• 등락률: {corp.등락률}%");
                     break;
             }
-            
+
             TalkSet_infoPanel.text = sb.ToString();
-            if (TalkSet_infoBackground != null) {
+            if (TalkSet_infoBackground != null)
+            {
                 TalkSet_infoBackground.SetActive(true);
             }
         }
@@ -141,18 +149,22 @@ namespace DevelopersHub.ClashOfWhatever
 
         // 건물 설명 초기화
         // 검색 UI 초기화 및 이벤트 설정
-        private void InitializeSearchUI() {
+        private void InitializeSearchUI()
+        {
             // 돋보기 버튼 클릭 이벤트
-            searchButton.GetComponent<UnityEngine.UI.Button>().onClick.AddListener(() => {
+            searchButton.GetComponent<UnityEngine.UI.Button>().onClick.AddListener(() =>
+            {
                 searchPanel.SetActive(!searchPanel.activeSelf);
-                if (searchPanel.activeSelf) {
+                if (searchPanel.activeSelf)
+                {
                     searchInput.text = "";
                     UpdateSuggestions("");
                 }
             });
 
             // 검색 입력 이벤트
-            searchInput.onValueChanged.AddListener((value) => {
+            searchInput.onValueChanged.AddListener((value) =>
+            {
                 UpdateSuggestions(value);
             });
 
@@ -179,6 +191,12 @@ namespace DevelopersHub.ClashOfWhatever
             suggestionsPanel.gameObject.SetActive(true);
             searchText = searchText.ToLower();
 
+            // suggestionPrefab 자체는 비활성화
+            if (suggestionPrefab.activeSelf)
+            {
+                suggestionPrefab.SetActive(false);
+            }
+
             // 검색어와 일치하는 기업 찾기
             var matches = dicCorp.Values
                 .Where(corp => corp.CompName.ToLower().Contains(searchText) ||
@@ -188,6 +206,7 @@ namespace DevelopersHub.ClashOfWhatever
             foreach (var corp in matches)
             {
                 var suggestionObj = Instantiate(suggestionPrefab, suggestionsPanel);
+                suggestionObj.SetActive(true);  // 복제된 객체는 활성화
                 var suggestionText = suggestionObj.GetComponentInChildren<TextMeshProUGUI>();
                 suggestionText.text = $"{corp.CompName} ({corp.Ticker})";
 
@@ -201,7 +220,8 @@ namespace DevelopersHub.ClashOfWhatever
 
                 // 현재 스코프의 corp 변수를 캡처하기 위해 임시 변수 사용
                 var currentCorp = corp;
-                button.onClick.AddListener(() => {
+                button.onClick.AddListener(() =>
+                {
                     SelectCompany(currentCorp.Ticker);
                 });
 
@@ -210,10 +230,12 @@ namespace DevelopersHub.ClashOfWhatever
         }
 
         // 기업 선택 시 처리
-        private void SelectCompany(string ticker) {
+        private void SelectCompany(string ticker)
+        {
             Debug.Log($"SelectCompany called with ticker: {ticker} ");
             // 선택한 기업의 정보를 가져와서 UI 업데이트
-            if (!dicCorp.ContainsKey(ticker)) {
+            if (!dicCorp.ContainsKey(ticker))
+            {
                 Debug.LogWarning($"Ticker {ticker} not found in corp data.");
                 return;
             }
@@ -223,62 +245,71 @@ namespace DevelopersHub.ClashOfWhatever
             searchPanel.SetActive(false);
         }
 
-        private IEnumerator TransitionToNewCompany() {
+        private IEnumerator TransitionToNewCompany()
+        {
             List<Coroutine> animations = new List<Coroutine>();
-            
+
             // 모든 건물들을 위로 올라가게 하는 애니메이션
-            foreach (GameObject building in _buildingList) {
+            foreach (GameObject building in _buildingList)
+            {
                 if (building.name.Contains("Plane_Field")) continue; // 밭 건물은 제외
                 animations.Add(StartCoroutine(AnimateBuilding(building, true)));
             }
 
             // 모든 상승 애니메이션이 완료될 때까지 대기
-            foreach (var anim in animations) {
+            foreach (var anim in animations)
+            {
                 yield return anim;
             }
-            
+
             // 건물들 회전 애니메이션
             animations.Clear();
-            foreach (GameObject building in _buildingList) {
+            foreach (GameObject building in _buildingList)
+            {
                 if (building.name.Contains("Plane_Field")) continue;
                 animations.Add(StartCoroutine(RotateBuilding(building)));
             }
 
             // 모든 회전 애니메이션이 완료될 때까지 대기
-            foreach (var anim in animations) {
+            foreach (var anim in animations)
+            {
                 yield return anim;
             }
-            
+
             // 건물들을 아래로 내려오게 하는 애니메이션
             animations.Clear();
-            foreach (GameObject building in _buildingList) {
+            foreach (GameObject building in _buildingList)
+            {
                 if (building.name.Contains("Plane_Field")) continue;
                 animations.Add(StartCoroutine(AnimateBuilding(building, false)));
             }
 
             // 모든 하강 애니메이션이 완료될 때까지 대기
-            foreach (var anim in animations) {
+            foreach (var anim in animations)
+            {
                 yield return anim;
             }
         }
 
-        private IEnumerator RotateBuilding(GameObject building) {
+        private IEnumerator RotateBuilding(GameObject building)
+        {
             float rotationDuration = 1.5f;  // 회전 시간을 늘림
             float elapsedTime = 0f;
             Vector3 startRotation = building.transform.eulerAngles;
             Vector3 endRotation = startRotation + new Vector3(0f, 360f, 0f);
 
-            while (elapsedTime < rotationDuration) {
+            while (elapsedTime < rotationDuration)
+            {
                 elapsedTime += Time.deltaTime;
                 float progress = elapsedTime / rotationDuration;
-                
+
                 // 부드러운 회전을 위해 SmoothStep 사용
                 float smoothProgress = Mathf.SmoothStep(0f, 1f, progress);
-                
+
                 // Vector3.Lerp를 사용하여 직접 오일러 각도 보간
                 Vector3 currentRotation = Vector3.Lerp(startRotation, endRotation, smoothProgress);
                 building.transform.eulerAngles = currentRotation;
-                
+
                 yield return null;
             }
 
@@ -286,29 +317,32 @@ namespace DevelopersHub.ClashOfWhatever
             building.transform.eulerAngles = startRotation;
         }
 
-        private void ShuffleBuildings() {
+        private void ShuffleBuildings()
+        {
             // 현재 건물들의 위치를 저장
             List<Vector3> originalPositions = _buildingList.Select(b => b.transform.position).ToList();
             List<Quaternion> originalRotations = _buildingList.Select(b => b.transform.rotation).ToList();
-            
+
             // Fisher-Yates 알고리즘을 사용하여 위치를 셔플
             System.Random rnd = new System.Random();
-            for (int i = originalPositions.Count - 1; i > 0; i--) {
+            for (int i = originalPositions.Count - 1; i > 0; i--)
+            {
                 int randomIndex = rnd.Next(0, i + 1);
-                
+
                 // 위치 교환
                 Vector3 tempPos = originalPositions[i];
                 originalPositions[i] = originalPositions[randomIndex];
                 originalPositions[randomIndex] = tempPos;
-                
+
                 // 회전 교환
                 Quaternion tempRot = originalRotations[i];
                 originalRotations[i] = originalRotations[randomIndex];
                 originalRotations[randomIndex] = tempRot;
             }
-            
+
             // 셔플된 위치로 건물들 이동
-            for (int i = 0; i < _buildingList.Count; i++) {
+            for (int i = 0; i < _buildingList.Count; i++)
+            {
                 _buildingList[i].transform.position = new Vector3(
                     originalPositions[i].x,
                     0, // y 좌표는 항상 0으로 유지
@@ -318,35 +352,36 @@ namespace DevelopersHub.ClashOfWhatever
             }
         }
 
-        private IEnumerator AnimateBuilding(GameObject building, bool goingUp) {
+        private IEnumerator AnimateBuilding(GameObject building, bool goingUp)
+        {
             float duration = 0.5f;
             float elapsedTime = 0f;
             Vector3 startPos = building.transform.position;
-            Vector3 endPos = goingUp ? 
+            Vector3 endPos = goingUp ?
                 startPos + Vector3.up * 10f : // 위로 올라갈 때
                 new Vector3(startPos.x, 3f, startPos.z); // 아래로 내려올 때
 
-            while (elapsedTime < duration) {
+            while (elapsedTime < duration)
+            {
                 elapsedTime += Time.deltaTime;
                 float progress = elapsedTime / duration;
                 progress = goingUp ? Mathf.Sin(progress * Mathf.PI * 0.5f) : 1f - Mathf.Cos(progress * Mathf.PI * 0.5f);
-                
+
                 building.transform.position = Vector3.Lerp(startPos, endPos, progress);
                 yield return null;
             }
-            
+
             building.transform.position = endPos;
         }
 
-        private void InitializeBuildingDescriptions() {
-            CorpData corp = dicCorp[g_stbd_code];
+        private async void InitializeBuildingDescriptions()
+        {
+            CorpData corp = await GetCorpData(g_stbd_code);
             TitleText.text = $"{corp.CompName} ({corp.Ticker}) 기준가 : {Util.gf_CommaValue(corp.종가)}";
             if (!g_stbd_code.Equals("005930"))
             {
-                Debug.Log("Checking for financial data for zin" + corp.BPS + "zin");
-                if (double.Parse(corp.BPS) == 0 && double.Parse(corp.DIV) == 0 && double.Parse(corp.PER) == 0)
+                if (corp == null || (double.Parse(corp.BPS) == 0 && double.Parse(corp.DIV) == 0 && double.Parse(corp.PER) == 0))
                 {
-                    Debug.LogWarning("Financial data is missing for " + corp.CompName);
                     TalkSet.SetActive(true);
                     TalkPanel.text = "해당 기업의 재무 데이터가 없어요. 삼성전자로 이동할게요.";
 
@@ -361,7 +396,7 @@ namespace DevelopersHub.ClashOfWhatever
                 "쉽게 말하면, 회사를 다 팔아서 빚 갚고 남은 돈을 주식 수로 나눈 것이야.",
                 string.Format("{0}의 BPS는 {1}으로 기업의 순자산인 {2}원을 발행주식수인 {3}주로 나눈값을 뜻해.", corp.CompName, corp.BPS, Util.gf_CommaValue(nProfit), Util.gf_CommaValue(corp.상장주식수)),
             };
-            
+
             buildingDescriptions["PER"] = new string[] {
                 "PER(주가수익비율)은 “이 회사가 버는 돈에 비해, 주식 가격이 얼마나 비싼지”를 나타내는 숫자야!",
                 String.Format("”{0}가 1년에 버는 돈 기준으로 {1}년 있어야 주식값만큼 번다”라고 이해하면 돼", corp.CompName, corp.PER),
@@ -401,7 +436,7 @@ namespace DevelopersHub.ClashOfWhatever
             };
 
             buildingDescriptions["상장주식수"] = new string[] {
-                "상장주식수는 주식시장에 상장된 총 주식의 수를 의미해! 회사를 피자 🍕라고 생각하면, 그 피자를 얼마나 많은 조각으로 나눠서 시장에 팔았는지를 말해!",
+                "상장주식수는 주식시장에 상장된 총 주식의 수를 의미해! 회사를 피자라고 생각하면, 그 피자를 얼마나 많은 조각으로 나눠서 시장에 팔았는지를 말해!",
                 "이 숫자가 주가에 영향을 주기도 하고, PER, 시가총액, DPS 등을 계산할 때 꼭 필요해!",
                 "그런데 상장된 주식 수는 고정된 게 아니라, 늘어나거나 줄어들 수 있어. 예를 들어, 회사가 새로운 주식을 발행하거나, 자사주 매입을 통해 주식 수를 줄일 수 있어.",
                 "추가상장 : 상장주식수가 늘어나는 경우로, 회사가 새로운 주식을 발행해서 자금을 조달할 때 발생해. 이 경우, 기존 주주들의 지분이 희석될 수 있어.",
@@ -421,22 +456,23 @@ namespace DevelopersHub.ClashOfWhatever
 
             buildingDescriptions["인력정보"] = new string[] {
                 string.Format("[{0}]는 총 {1:N0}명의 임직원이 함께하고 있어!", corp.CompName, Util.gf_CommaValue(maleCount + femaleCount)),
-                string.Format("남성 직원은 {0:N0}명으로 {1:F1}%, 여성 직원은 {2:N0}명으로 {3:F1}%를 차지하고 있어.", 
-                    Util.gf_CommaValue(maleCount), maleRatio, 
+                string.Format("남성 직원은 {0:N0}명으로 {1:F1}%, 여성 직원은 {2:N0}명으로 {3:F1}%를 차지하고 있어.",
+                    Util.gf_CommaValue(maleCount), maleRatio,
                     Util.gf_CommaValue(femaleCount), femaleRatio),
                 string.Format("올해 회사의 순이익이 {0}원으로 예상되는데, 직원의 인당 생산성은 {1:N0}으로 예측돼.", Util.ToKoreanCurrencyFormat(nEPS), Util.ToKoreanCurrencyFormat(nEPS / (maleCount + femaleCount))),
             };
         }
 
         // 다음 설명 텍스트 가져오기
-        public bool GetNextDescription(string buildingName, out string description) {
+        public bool GetNextDescription(string buildingName, out string description)
+        {
             description = "";
 
             if (buildingName.Contains("Plane_Field"))
             {
                 buildingName = "인력정보"; // 인력정보 건물은 별도의 설명이 없으므로 처리
             }
-            
+
             // 처음 클릭한 건물이거나 다른 건물을 클릭한 경우
             if (buildingName != currentBuildingName)
             {
@@ -458,23 +494,28 @@ namespace DevelopersHub.ClashOfWhatever
             return false;
         }
 
-
-        public enum RequestsID {
-            AUTH = 1, SYNC = 2, BUILD = 3
-        }
-        void Awake() {
+        void Awake()
+        {
             _instance = this;
         }
-        void Start()
+        async void Start()
         {
-            RealtimeNetworking.OnPacketReceived += ReceivedPacket;
-            ReadCSV();
+            await System.Threading.Tasks.Task.Yield(); // 첫 프레임을 기다림
+            ReadCSV(); // API 호출 시작
             InitializeBuildingDescriptions();  // 건물 설명 초기화
             InitData();
+            
+            // suggestionPrefab 초기 설정
+            if (suggestionPrefab != null)
+            {
+                suggestionPrefab.SetActive(false);
+            }
+            
             InitializeSearchUI();  // 검색 UI 초기화
 
             // TalkSet에 Button 컴포넌트 추가
-            if (!TalkSet.GetComponent<UnityEngine.UI.Button>()) {
+            if (!TalkSet.GetComponent<UnityEngine.UI.Button>())
+            {
                 UnityEngine.UI.Button button = TalkSet.AddComponent<UnityEngine.UI.Button>();
                 button.onClick.AddListener(() => ShowNextDescription());
             }
@@ -483,10 +524,11 @@ namespace DevelopersHub.ClashOfWhatever
         private string[] buildingPurposes = {
             "BPS", "DIV", "DPS", "EPS", "PBR", "PER", "상장주식수","시가총액", "인력정보"
         };
-        
+
         [SerializeField] private TMP_FontAsset buildingFont = null;
 
-        private void InitData() {
+        private void InitData()
+        {
             // 랜덤 색상을 위한 색상 배열 정의
             Color[] buildingColors = new Color[] {
                 new Color(1f, 0.5f, 0.5f),  // 연한 빨강
@@ -497,13 +539,15 @@ namespace DevelopersHub.ClashOfWhatever
             };
 
             // #1 buildingList init
-            for (int i = 0; i < buildings.transform.childCount; i++) {
+            for (int i = 0; i < buildings.transform.childCount; i++)
+            {
                 GameObject _smallBuilding = buildings.transform.GetChild(i).gameObject;
                 _smallBuilding.AddComponent<MyClickControls>();
-                
+
                 // 모든 자식 렌더러 컴포넌트 가져오기
                 Renderer[] renderers = _smallBuilding.GetComponentsInChildren<Renderer>();
-                foreach (Renderer renderer in renderers) {
+                foreach (Renderer renderer in renderers)
+                {
                     Material newMaterial = new Material(renderer.material);
                     // newMaterial.color = buildingColors[i % buildingColors.Length];
                     renderer.material = newMaterial;
@@ -512,20 +556,20 @@ namespace DevelopersHub.ClashOfWhatever
                 // 건물 위에 간판(TextMesh Pro) 추가
                 GameObject signObject = new GameObject("BuildingSign");
                 signObject.transform.SetParent(_smallBuilding.transform);
-                
+
                 // 건물 위에 적절한 위치로 설정 (건물의 높이를 고려)
                 Renderer buildingRenderer = _smallBuilding.GetComponent<Renderer>();
                 float buildingHeight = buildingRenderer != null ? buildingRenderer.bounds.size.y : 2f;
                 buildingHeight = buildingHeight / _smallBuilding.GetComponent<Renderer>().transform.localScale.y;
                 signObject.transform.localPosition = new Vector3(0, buildingHeight + 1.0f, 0);
-                
+
 
                 // 텍스트가 카메라를 향하도록 회전 (빌보드 효과)
                 signObject.transform.rotation = Quaternion.Euler(45, 45, 0);
-                
+
                 // 텍스트 크기 조정을 위한 스케일 설정 (너비 2배)
                 signObject.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
-                
+
 
                 // TextMeshPro 컴포넌트 추가 및 설정
                 TextMeshPro signText = signObject.AddComponent<TextMeshPro>();
@@ -534,19 +578,23 @@ namespace DevelopersHub.ClashOfWhatever
                 signText.alignment = TextAlignmentOptions.Center;
                 signText.rectTransform.sizeDelta = new Vector2(40f, 10f);  // 텍스트 영역의 너비를 늘림
                 signText.color = Color.white;
-                
+
                 // 텍스트가 잘 보이도록 설정
                 signText.outlineWidth = 0.2f;
                 signText.outlineColor = Color.black;
 
                 // Noto Sans 폰트 설정
-                if (buildingFont != null) {
+                if (buildingFont != null)
+                {
                     signText.font = buildingFont;
-                } else {
+                }
+                else
+                {
                     Debug.LogError("Noto Sans 폰트를 찾을 수 없습니다!");
                 }
 
-                if (!_smallBuilding.name.Contains("Plane_Field")) { // "Plane_Field"는 밭을 클릭하는거라 제외
+                if (!_smallBuilding.name.Contains("Plane_Field"))
+                { // "Plane_Field"는 밭을 클릭하는거라 제외
                     _smallBuilding.name = buildingPurposes[i % buildingPurposes.Length];
                 }
 
@@ -554,150 +602,247 @@ namespace DevelopersHub.ClashOfWhatever
             }
         }
 
-        private void ReceivedLong(int id, long value) {
-            switch(id) {
-                case 1:
-                    Debug.Log(value);
-                    break;
-            }
-        }
-        private void ReceivedPacket(Packet packet) {
-            int id = packet.ReadInt();
-            Debug.Log("ReceivedPacket is called [" + id + "]");
 
-            switch((RequestsID)id) {
-                case RequestsID.AUTH:
-                    long accountID = packet.ReadLong();
-                    SendSyncRequests();
-                    break;
-                    
-                case RequestsID.BUILD:
-                    int response = packet.ReadInt();
-                    switch (response) {
-                        case 0:
-                            Debug.Log("No resources");
-                            break;
-                        case 1:
-                            Debug.Log("Placed successfully");
-                            SendSyncRequests();
-                            break;
-                        case 2:
-                            Debug.Log("Place taken");
-                            break;
-                    }
-                    break;
-            }
-        }
-
-        public void SendSyncRequests() {
-            Packet p = new Packet();
-            p.Write((int)RequestsID.SYNC);
-            p.Write(SystemInfo.deviceUniqueIdentifier);
-            Sender.TCP_Send(p);
-        }
-
-        private void ConnectionResponse(bool successful) {
-            if (successful) 
+        private async void ReadCSV()
+        {
+            try 
             {
-                RealtimeNetworking.OnDisconnectedFromServer += DisconnectedFromServer;
-                string device = SystemInfo.deviceUniqueIdentifier;
-                Packet packet = new Packet();
-                packet.Write((int)RequestsID.AUTH);
-                packet.Write(device);
-                Sender.TCP_Send(packet);
-            } 
-            else
-            {
-                // TODO : Connection failed message box with retry button 
-            }
-            RealtimeNetworking.OnConnectingToServerResult -= ConnectionResponse;
-        }
-
-        public void ConnectToServer() {
-            RealtimeNetworking.OnConnectingToServerResult += ConnectionResponse;
-            RealtimeNetworking.Connect();   
-        }
-
-        private void DisconnectedFromServer() {
-            RealtimeNetworking.OnDisconnectedFromServer -= DisconnectedFromServer;
-            // TODO : Connection failed message box with retry button 
-
-        }
-
-
-        public void ReadCSV() {            
-            // 읽어 올 파일 이름
-            string path = "carrot_game_corp_data.csv";
-            
-            // 데이터를 저장하는 리스트 편하게 관리하기 위해 List로 선언
-            List<CorpData> menuList = new List<CorpData>();
-
-            // Application.dataPath는 Unity의 Assets폴더의 절대경로
-            // 뒤에 읽으려는 파일이 있는 경로를 작성 ex) Assets > Files에 menu.csv를 읽으려면? "/" + "Files/menu.csv"추가
-            StreamReader reader = new StreamReader(Application.dataPath + "/Files/" + path);
-
-            // 마지막 줄을 판별하기 위한 bool 타입 변수
-            bool isFinish = false;
-
-            while(isFinish == false)
-            {
-                // ReadLine은 한줄씩 읽어서 string으로 반환하는 메서드
-                // 한줄씩 읽어서 data변수에 담으면
-                string data = reader.ReadLine(); // 한 줄 읽기
-                
-                // data 변수가 비었는지 확인
-                if(data == null)
+                using (UnityWebRequest webRequest = UnityWebRequest.Get("https://carrotstock.com/api/carrot_game/master/"))
                 {
-                    // 만약 비었다면? 마지막 줄 == 데이터 없음이니
-                    // isFinish를 true로 만들고 반복문 탈출
-                    isFinish = true;
-                    break;
-                }
-                
-                // .csv는 ,(콤마)를 기준으로 데이터가 구분되어 있으므로 ,(콤마)를 기준으로 데이터를 나눠서 list에 담음
-                var splitData = data.Split(','); // 콤마로 데이터 분할
-                
-                // 위에 생성했던 객체를 선언해주고
-                CorpData corp = new CorpData();
-                
-                corp.Ticker = splitData[0];
-                corp.CompName = splitData[1];
-                corp.BPS = Util.gf_ToNumString(splitData[2]); // BPS는 숫자이므로 숫자형으로 변환
-                corp.DIV = Util.gf_ToNumString(splitData[3]);
-                corp.DPS = Util.gf_ToNumString(splitData[4]);
-                corp.EPS = Util.gf_ToNumString(splitData[5]);
-                corp.PBR = Util.gf_ToNumString(splitData[6]);
-                corp.PER = Util.gf_ToNumString(splitData[7]);
-                corp.거래대금 = Util.gf_ToNumString(splitData[8]);
-                corp.거래량 = Util.gf_ToNumString(splitData[9]);
-                corp.고가 = Util.gf_ToNumString(splitData[10]);
-                corp.등락률 = Util.gf_ToNumString(splitData[11]);
-                corp.상장주식수 = Util.gf_ToNumString(splitData[12]);
-                corp.시가 = Util.gf_ToNumString(splitData[13]);
-                corp.시가총액 = Util.gf_ToNumString(splitData[14]);
-                corp.저가 = Util.gf_ToNumString(splitData[15]);
-                corp.종가 = Util.gf_ToNumString(splitData[16]);
-                corp.dart_code = splitData[17];
-                
-                // dart_data는 18번 인덱스부터 끝까지의 모든 데이터를 합침
-                if (splitData.Length > 18) {
-                    corp.dart_data = string.Join(",", splitData.Skip(18));
-                } else {
-                    corp.dart_data = "";
-                }
+                    // 요청 보내기
+                    var operation = webRequest.SendWebRequest();
 
-                // menu 객체에 다 담았다면 dictionary에 key와 value값으로 저장
-                // 이렇게 해두면 dicCorp.Add("005930");로 corp.시가총액, corp.PER .. 접근 가능
-                if (!String.IsNullOrEmpty(corp.CompName) && !String.IsNullOrEmpty(corp.BPS)) {
-                    dicCorp.Add(corp.Ticker, corp);
+                    // 요청이 완료될 때까지 대기
+                    while (!operation.isDone)
+                        await System.Threading.Tasks.Task.Yield();
+
+                    if (webRequest.result == UnityWebRequest.Result.Success)
+                    {
+                        string jsonData = webRequest.downloadHandler.text;
+                        ProcessApiData(jsonData);
+                    }
+                    else
+                    {
+                        Debug.LogError($"ReadCSV API 요청 실패: {webRequest.error}");
+                        // 에러 발생 시 로컬 데이터로 폴백
+                        // LoadLocalData();
+                    }
                 }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"데이터 로드 중 오류 발생: {e.Message}");
+                // LoadLocalData();
             }
         }
 
+        private void ProcessApiData(string jsonData)
+        {
+            try
+            {
+                // API에서 받은 JSON 데이터를 파싱
+                var response = JsonUtility.FromJson<MasterList>(jsonData);
+                if (response?.success == true && response?.data != null)
+                {
+                    foreach (var item in response.data)
+                    {
+                        // 개별 종목 정보를 API로 가져오기
+                        if (!dicCorp.ContainsKey(item.ticker))
+                        {
+                            dicCorp.Add(item.ticker, new CorpData
+                            {
+                                Ticker = item.ticker,
+                                CompName = item.compName,
+                                BPS = "0",
+                                DIV = "0",
+                                DPS = "0",
+                                EPS = "0",
+                                PBR = "0",
+                                PER = "0",
+                                거래대금 = "0",
+                                거래량 = "0",
+                                고가 = "0",
+                                등락률 = "0",
+                                상장주식수 = "0",
+                                시가 = "0",
+                                시가총액 = "0",
+                                저가 = "0",
+                                종가 = "0",
+                                dart_code = "",
+                                dart_data = new DartData[0]
+                            });
+                        }
+                    }
+                }
+                else
+                {
+                    Debug.LogError("ProcessApiData 응답에서 유효한 데이터를 찾을 수 없습니다.");
+                    // LoadLocalData();
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"ProcessApiData JSON 파싱 중 오류 발생: {e.Message}");
+                // LoadLocalData();
+            }
+        }
+
+        private void LoadLocalData()
+        {
+            try
+            {
+                string path = "carrot_game_corp_data.csv";
+                string[] lines = File.ReadAllLines(Path.Combine(Application.dataPath, "Files", path));
+
+                foreach (string line in lines)
+                {
+                    var splitData = line.Split(',');
+                    if (splitData.Length < 17) continue;
+
+                    CorpData corp = new CorpData
+                    {
+                        Ticker = splitData[0],
+                        CompName = splitData[1],
+                        BPS = Util.gf_ToNumString(splitData[2]),
+                        DIV = Util.gf_ToNumString(splitData[3]),
+                        DPS = Util.gf_ToNumString(splitData[4]),
+                        EPS = Util.gf_ToNumString(splitData[5]),
+                        PBR = Util.gf_ToNumString(splitData[6]),
+                        PER = Util.gf_ToNumString(splitData[7]),
+                        거래대금 = Util.gf_ToNumString(splitData[8]),
+                        거래량 = Util.gf_ToNumString(splitData[9]),
+                        고가 = Util.gf_ToNumString(splitData[10]),
+                        등락률 = Util.gf_ToNumString(splitData[11]),
+                        상장주식수 = Util.gf_ToNumString(splitData[12]),
+                        시가 = Util.gf_ToNumString(splitData[13]),
+                        시가총액 = Util.gf_ToNumString(splitData[14]),
+                        저가 = Util.gf_ToNumString(splitData[15]),
+                        종가 = Util.gf_ToNumString(splitData[16]),
+                        dart_code = splitData.Length > 17 ? splitData[17] : "",
+                        dart_data = new DartData[0] // 로컬 데이터에서는 dart_data를 사용하지 않음
+                    };
+
+                    if (!String.IsNullOrEmpty(corp.CompName) && !String.IsNullOrEmpty(corp.BPS))
+                    {
+                        dicCorp[corp.Ticker] = corp;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"LoadLocalData 로컬 데이터 로드 중 오류 발생: {e.Message}");
+            }
+        }
+
+        [Serializable]
+        private class StockItem
+        {
+            public string ticker;
+            public string compName;
+        }
+
+        [Serializable]
+        private class MasterList
+        {
+            public bool success;
+            public List<StockItem> data;
+        }
+
+        public class WebJsonData
+        {
+            public bool success;
+            public CorpData data;  // 서버에서 'data' 필드로 응답을 보내므로 이름을 변경
+        }
+
+        [Serializable]
+        public class DartData
+        {
+            public string rcept_no;
+            public string corp_cls;
+            public string corp_code;
+            public string corp_name;
+            public string sexdstn;
+            public string fo_bbm;
+            public string reform_bfe_emp_co_rgllbr;
+            public string reform_bfe_emp_co_cnttk;
+            public string reform_bfe_emp_co_etc;
+            public string rgllbr_co;
+            public string rgllbr_abacpt_labrr_co;
+            public string cnttk_co;
+            public string cnttk_abacpt_labrr_co;
+            public string sm;
+            public string avrg_cnwk_sdytrn;
+            public string fyer_salary_totamt;
+            public string jan_salary_am;
+            public string rm;
+            public string stlm_dt;
+        }
+
+        [Serializable]
         public class CorpData
         {
-            // Ticker,BPS,DIV,DPS,EPS,PBR,PER,거래대금,거래량,고가,등락률,상장주식수,시가,시가총액,저가,종가,dart_data,dart_code
-            public String Ticker,CompName,BPS,DIV,DPS,EPS,PBR,PER,거래대금,거래량,고가,등락률,상장주식수,시가,시가총액,저가,종가,dart_data,dart_code;
-        }        
+            public string Ticker;
+            public string CompName;
+            public string BPS;
+            public string DIV;
+            public string DPS;
+            public string EPS;
+            public string PBR;
+            public string PER;
+            public string 거래대금;
+            public string 거래량;
+            public string 고가;
+            public string 등락률;
+            public string 상장주식수;
+            public string 시가;
+            public string 시가총액;
+            public string 저가;
+            public string 종가;
+            public string dart_code;
+            public DartData[] dart_data;
+        }      
+
+        public async System.Threading.Tasks.Task<CorpData> GetCorpData(string szCode)
+        {
+            // 로컬 데이터가 있으면 반환
+            if (dicCorp.ContainsKey(szCode) && dicCorp[szCode].BPS != "0")
+            {
+                return dicCorp[szCode];
+            }
+
+            // API를 통해 데이터 요청
+            try
+            {
+                string url = $"https://carrotstock.com/api/carrot_game/stbd_code/?ticker={szCode}";
+                using (UnityWebRequest webRequest = UnityWebRequest.Get(url))
+                {
+                    var operation = webRequest.SendWebRequest();
+                    while (!operation.isDone)
+                        await System.Threading.Tasks.Task.Yield();
+
+                    if (webRequest.result == UnityWebRequest.Result.Success)
+                    {
+                        string jsonData = webRequest.downloadHandler.text;
+                        // API 응답에서 단일 CorpData 파싱
+                        var rawData = JsonUtility.FromJson<WebJsonData>(jsonData);
+                        var corpData = rawData.data;
+                        Debug.Log($"GetCorpData API 응답: {corpData.CompName} ({corpData.dart_data})");
+                        if (corpData != null && !string.IsNullOrEmpty(corpData.CompName))
+                        {
+                            dicCorp[szCode] = corpData; // 캐시에 저장
+                            return corpData;
+                        }
+                    }
+                    Debug.LogError($"GetCorpData API 요청 실패:{url} {webRequest.error}");
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"GetCorpData 데이터 로드 중 오류 발생: {e.Message}");
+            }
+
+            // API 호출 실패시 null 반환
+            return null;
+        }  
     }
 }

@@ -12,7 +12,7 @@ namespace DevelopersHub.ClashOfWhatever {
         public static CameraController instance {get { return _instance; }}
 
         [SerializeField] private Camera _camera = null;
-        [SerializeField] private float _moveSpeed = 400;
+        [SerializeField] private float _moveSpeed = 50;
         [SerializeField] private float _moveSmooth = 5;
         [SerializeField] private float _zoomSmooth = 5;
         [SerializeField] private float _zoomSpeed = 10f; // 줌 속도 증가

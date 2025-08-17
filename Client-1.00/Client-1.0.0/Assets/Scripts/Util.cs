@@ -125,28 +125,20 @@ namespace DevelopersHub.ClashOfWhatever
         }
 
         /// <summary>
-        /// DART 인력 정보 JSON 문자열에서 남녀 직원 수를 계산
+        /// DART 인력 정보에서 남녀 직원 수를 계산
         /// </summary>
-        /// <param name="dartData">DART 인력 정보 JSON 문자열</param>
-        /// <returns>(남성 전체 인원, 여성 전체 인원) 튜플</returns>
-
-        public static (int male, int female, long maleJanuarySalary, long femaleJanuarySalary, long maleTotalSalary, long femaleTotalSalary) GetEmployeeCount(string dartData)
+        /// <param name="dartData">DART 인력 정보 배열</param>
+        /// <returns>(남성 전체 인원, 여성 전체 인원, 남성 1월 급여, 여성 1월 급여, 남성 총 급여, 여성 총 급여) 튜플</returns>
+        public static (int male, int female, long maleJanuarySalary, long femaleJanuarySalary, long maleTotalSalary, long femaleTotalSalary) GetEmployeeCount(Player.DartData[] dartData)
         {
             try
             {
-                Debug.Log("DART 데이터 파싱 시작..." );
-                if (string.IsNullOrEmpty(dartData))
+                Debug.Log($"DART 데이터 처리 시작... 데이터 개수: {dartData?.Length ?? 0}");
+                if (dartData == null || dartData.Length == 0)
                 {
                     Debug.LogWarning("DART 데이터가 비어있습니다.");
                     return (0, 0, 0, 0, 0, 0);
                 }
-
-                // 1. 큰따옴표 이스케이프 정리
-                dartData = dartData.Replace("\"\"", "\"");
-                dartData = dartData.Trim('"');
-
-                // 2. JSON 배열 파싱
-                DartDataItem[] items = JsonHelper.FromJson<DartDataItem>(dartData);
 
                 int maleTotal = 0;
                 int femaleTotal = 0;
@@ -161,7 +153,7 @@ namespace DevelopersHub.ClashOfWhatever
                 // 남성 직원은 "남", 여성 직원은 "여"로 구분
                 // rgllbr_co는 직원, cnttk_co는 임원, sm은 임직원, fyer_salary_totamt는 연간 총 급여
                 // 급여는 fyer_salary_totamt 필드에서 추출
-                foreach (var emp in items)
+                foreach (var emp in dartData)
                 {
                     if (emp.sexdstn == "남")
                     {
