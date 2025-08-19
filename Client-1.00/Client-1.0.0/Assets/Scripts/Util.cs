@@ -91,7 +91,7 @@ namespace DevelopersHub.ClashOfWhatever
         /// <param name="unitCount">표시할 단위의 수 (1-4: 조부터 시작해서 원까지)</param>
         public static string ToKoreanCurrencyFormat(long number, int unitCount)
         {
-            if (number == 0) return "0원";
+            if (number == 0) return "0";
             if (unitCount < 1 || unitCount > 4) unitCount = 4;
 
             var units = new List<(long value, string name)>
@@ -99,7 +99,7 @@ namespace DevelopersHub.ClashOfWhatever
                 (number / 1000000000000L, "조"),
                 ((number % 1000000000000L) / 100000000, "억"),
                 ((number % 100000000) / 10000, "만"),
-                (number % 10000, "원")
+                (number % 10000, "")
             };
 
             var sb = new System.Text.StringBuilder();
@@ -119,7 +119,7 @@ namespace DevelopersHub.ClashOfWhatever
                 }
             }
 
-            if (sb.Length == 0) return "0원";
+            if (sb.Length == 0) return "0";
             if (sb.Length > 0 && sb[sb.Length - 1] == ' ') sb.Length -= 1;
             return sb.ToString().Trim();
         }

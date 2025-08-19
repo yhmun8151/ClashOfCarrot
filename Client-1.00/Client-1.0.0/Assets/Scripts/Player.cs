@@ -21,7 +21,6 @@ namespace DevelopersHub.ClashOfWhatever
         [SerializeField] String g_stbd_code = "005930"; // 기본값은 삼성전자 
         [SerializeField] GameObject buildings;
         [SerializeField] public GameObject TalkSet;
-        [SerializeField] public TextMeshProUGUI TalkPanel;
         public List<GameObject> _buildingList = new List<GameObject>();
         private static Player _instance = null;
         public static Player instance { get { return _instance; } }
@@ -36,14 +35,13 @@ namespace DevelopersHub.ClashOfWhatever
         [SerializeField] private RectTransform suggestionsPanel; // 검색 제안 패널
         [SerializeField] private GameObject suggestionPrefab; // 검색 제안 항목 프리팹
         private List<GameObject> currentSuggestions = new List<GameObject>();
-
+      
         // 대화창을 클릭했을 때 다음 설명을 보여주는 함수
         public void ShowNextDescription()
         {
             string description;
             if (GetNextDescription(currentBuildingName, out description))
             {
-                TalkPanel.text = description;
                 ShowBuildingInfo(currentBuildingName); // 정보 패널 업데이트
             }
             else
@@ -79,23 +77,25 @@ namespace DevelopersHub.ClashOfWhatever
             switch (buildingName)
             {
                 case "BPS":
+                    sb.AppendLine($"BPS(장부상 주당순자산가치)\n");
                     sb.AppendLine($"• BPS: {Util.gf_CommaValue(corp.BPS)}원");
                     double nProfit = double.Parse(corp.BPS) * double.Parse(corp.상장주식수);
-                    sb.AppendLine($"• 순자산: {Util.gf_CommaValue(nProfit.ToString())}원 ({Util.ToKoreanCurrencyFormat((long)nProfit, 2)})");
-                    sb.AppendLine($"• 상장주식수: {Util.gf_CommaValue(corp.상장주식수)}주");
-                    sb.Append($"• 시가총액: {Util.ToKoreanCurrencyFormat(double.Parse(corp.시가총액))}원");
+                    sb.AppendLine($"• 순자산:  {Util.ToKoreanCurrencyFormat((long)nProfit, 2)}");
+                    sb.AppendLine($"• 상장주식수: {Util.ToKoreanCurrencyFormat(long.Parse(corp.상장주식수), 3)}주");
+                    sb.Append($"• 시가총액: {Util.ToKoreanCurrencyFormat(double.Parse(corp.시가총액))}");
                     break;
                 case "PER":
+                    sb.AppendLine($"PER(주가수익비율)\n");
                     double nEPS = double.Parse(corp.시가총액) / double.Parse(corp.PER);
-                    sb.AppendLine($"[{corp.CompName}] 의 올해 순이익은 {Util.gf_CommaValue(nEPS.ToString())}원으로 ({Util.ToKoreanCurrencyFormat((long)nEPS, 2)})예상돼요.");
+                    sb.AppendLine($"• 예상 순이익 : {Util.ToKoreanCurrencyFormat((long)nEPS, 2)}");
                     sb.AppendLine($"• PER: {corp.PER}배");
-                    sb.Append($"• 주당순이익: {corp.EPS}원");
+                    sb.Append($"• 주당순이익: {Util.gf_CommaValue(corp.EPS)}원");
                     break;
                 case "DIV":
-                    sb.AppendLine($"[{corp.CompName}의 배당 정보]");
-                    sb.AppendLine($"• 배당수익률: {corp.DIV}%");
-                    sb.AppendLine($"• DPS: {corp.DPS}원");
-                    sb.Append($"• 현재가: {Util.gf_CommaValue(corp.종가)}원");
+                    sb.AppendLine($"DIV(배당수익률)\n");
+                    sb.AppendLine($"• 배당수익률: {Util.gf_CommaValue(corp.DIV)}%");
+                    sb.AppendLine($"• 예측배당금: {Util.gf_CommaValue(corp.DPS)}원");
+                    sb.Append($"• 기준가:{Util.gf_CommaValue(corp.종가)}원");
                     break;
                 case "DPS":
                     sb.AppendLine($"[{corp.CompName}의 배당금 정보]");
@@ -377,13 +377,12 @@ namespace DevelopersHub.ClashOfWhatever
         private async void InitializeBuildingDescriptions()
         {
             CorpData corp = await GetCorpData(g_stbd_code);
-            TitleText.text = $"{corp.CompName} ({corp.Ticker}) 기준가 : {Util.gf_CommaValue(corp.종가)}";
+            TitleText.text = $"{corp.CompName} ({corp.Ticker}) 기준가 : {Util.gf_CommaValue(corp.종가)} ({corp.Date})";
             if (!g_stbd_code.Equals("005930"))
             {
                 if (corp == null || (double.Parse(corp.BPS) == 0 && double.Parse(corp.DIV) == 0 && double.Parse(corp.PER) == 0))
                 {
                     TalkSet.SetActive(true);
-                    TalkPanel.text = "해당 기업의 재무 데이터가 없어요. 삼성전자로 이동할게요.";
 
                     g_stbd_code = "005930"; // 삼성전자 데이터로 초기화
                     SelectCompany(g_stbd_code); // 삼성전자 데이터로 초기화
@@ -392,74 +391,39 @@ namespace DevelopersHub.ClashOfWhatever
             }
             double nProfit = double.Parse(corp.BPS) * double.Parse(corp.상장주식수);
             buildingDescriptions["BPS"] = new string[] {
-                "BPS(주당순자산)는 한 주당 회사가 가지고 있는 진짜 가치를 말해.",
-                "쉽게 말하면, 회사를 다 팔아서 빚 갚고 남은 돈을 주식 수로 나눈 것이야.",
-                string.Format("{0}의 BPS는 {1}으로 기업의 순자산인 {2}원을 발행주식수인 {3}주로 나눈값을 뜻해.", corp.CompName, corp.BPS, Util.gf_CommaValue(nProfit), Util.gf_CommaValue(corp.상장주식수)),
+                ""
             };
 
             buildingDescriptions["PER"] = new string[] {
-                "PER(주가수익비율)은 “이 회사가 버는 돈에 비해, 주식 가격이 얼마나 비싼지”를 나타내는 숫자야!",
-                String.Format("”{0}가 1년에 버는 돈 기준으로 {1}년 있어야 주식값만큼 번다”라고 이해하면 돼", corp.CompName, corp.PER),
-                "즉, PER이 높으면 주식 가격이 비싸다는 뜻이고, 낮으면 싸다는 뜻이야.",
-
-                "PER이 낮다고 해서 무조건 좋은 회사는 아니야. PER이 낮은 이유가 있을 수 있어. 예를 들어, 회사가 돈을 잘 벌지 못하거나, 실적이 떨어졌거나, 일시적으로 이익이 많아 보여서 PER이 낮아진 경우도 있어.",
-                "반대로 PER이 높다고 해서 무조건 나쁜 회사는 아니야. PER이 높다는 건, 시장에서 그 회사의 미래 성장 가능성을 높게 보고 있다는 뜻일 수도 있어.",
-                "업종마다 평균 PER이 다르기 때문에, 같은 업종끼리 비교해야 정확하니 유의해! (예: IT 기업은 보통 PER이 높고, 은행주는 낮은 편이야)",
+                ""
             };
 
             // 나머지 건물들의 설명도 추가
             buildingDescriptions["DIV"] = new string[] {
-                "DIV(배당수익률)은 주식을 샀을 때, 그 회사가 나에게 매년 얼마만큼의 돈을 돌려주는지를 보여주는 비율이야.",
-                "쉽게 말하면, '내가 이 회사 주식 사서 1년 동안 얼마나 용돈 받는 거지?' 를 퍼센트(%)로 나타낸 거야.",
-                string.Format("{0}의 배당수익률은 {1}%로, 주식 가격 대비 매년 {2}원의 배당금을 받을것으로 예측돼", corp.CompName, corp.DIV, corp.DPS),
+                ""
             };
 
             buildingDescriptions["DPS"] = new string[] {
-                "DPS(주당배당금)은 한 주당 얼마의 배당금을 받는지를 알려줘. “내가 주식 한 주를 가지고 있으면, 1년에 얼마를 받는 거야?” 라는 질문의 정답이 DPS야.",
-                "DPS가 매년 늘어난다면, 그 회사는 주주에게 꾸준히 돈을 잘 돌려주는 회사일 수 있어.",
-                string.Format("{0}의 DPS는 {1}원이야. 즉, 주식 한 주를 가지고 있으면 매년 {1}원을 배당금으로 받을 수 있어.", corp.CompName, corp.DPS),
+                ""
             };
             buildingDescriptions["EPS"] = new string[] {
-                "EPS(주당순이익)란 “이 회사가 1년 동안 번 돈을, 주식 1주당으로 나눴을 때 얼마를 벌었는지” 를 보여주는 숫자야!",
-                "즉, 내가 주식 1주를 가지고 있다면, 그 주식은 회사의 이익 중 얼마나 가치가 있는지를 의미해",
-                "1주당 얼마의 이익을 창출했는지 보여주는 지표로, EPS가 높을수록, 그 회사는 돈을 잘 벌고 있는 회사일 가능성이 높아. 혹은, 주가가 너무 높아 보일 때, 실제로는 EPS도 높아서 정당한 가격일 수도 있어!",
-                string.Format("{0}의 EPS는 {1}원이야. 이 회사는 1주당 {1}원의 이익을 내고 있어.", corp.CompName, corp.EPS)
+                ""
             };
 
             buildingDescriptions["PBR"] = new string[] {
-                "PBR(주가순자산비율)은 “이 회사의 실제 자산가치에 비해, 주식이 얼마나 비싸게 거래되고 있는지” 를 보여주는 숫자야!",
-                "쉽게 풀면 회사가 문을 닫게되어 자산을 모두 팔았을 때, 주식 한 주당 얼마를 받을 수 있는지와 실제 시장에서의 주가를 비교하는 거야.",
-                "(주가 / 순자산)으로 계산할 수 있고, PBR은 1이면 주가가 자산가치와 비슷하다는 뜻이고, 1보다 크면 주식이 자산가치보다 비싸게 거래되고 있다는 뜻, 1보다 작으면 자산가치보다 싸게 거래되고 있다는 뜻이야.",
-                string.Format("{0}의 PBR는 {1}로, 현재 주가는 순자산가치보다 {2}배 비싸게 거래되고 있어.", corp.CompName, corp.PBR, corp.PBR),
-                "⚠️ 하지만 주의할 점! PBR이 낮다고 해서 무조건 좋은 회사는 아니야. PBR이 낮은 이유가 있을 수 있어. 예를 들어, 회사가 부채가 많거나, 미래 성장성이 낮다고 판단되면 PBR이 낮을 수 있어.",
-                "특히 재무상태가 중요한 기업 (예: 은행, 제조업)에 더 잘 어울리는 지표니까 참고해!",
+                ""
             };
 
             buildingDescriptions["상장주식수"] = new string[] {
-                "상장주식수는 주식시장에 상장된 총 주식의 수를 의미해! 회사를 피자라고 생각하면, 그 피자를 얼마나 많은 조각으로 나눠서 시장에 팔았는지를 말해!",
-                "이 숫자가 주가에 영향을 주기도 하고, PER, 시가총액, DPS 등을 계산할 때 꼭 필요해!",
-                "그런데 상장된 주식 수는 고정된 게 아니라, 늘어나거나 줄어들 수 있어. 예를 들어, 회사가 새로운 주식을 발행하거나, 자사주 매입을 통해 주식 수를 줄일 수 있어.",
-                "추가상장 : 상장주식수가 늘어나는 경우로, 회사가 새로운 주식을 발행해서 자금을 조달할 때 발생해. 이 경우, 기존 주주들의 지분이 희석될 수 있어.",
-                "감자 : 상장주식수가 줄어드는 경우로, 회사가 자사주를 매입하거나, 주식 수를 줄여서 가치를 높이려는 경우야. 이 경우, 기존 주주들의 지분이 늘어날 수 있어.",
-                "⚠️ 추가상장으로 기존 주주들의 지분이 희석되더라도 성장을 위해 필요한 자금을 조달하는 등 긍정적인 해석이 될 수 있고, 감자로 기존 주주들의 지분이 늘어나더라도 회사의 재무 구조 개선이나 적자 보전 등의 부정적인 해석이 될 수 있어 유의해야 해!",
+                ""
             };
 
             buildingDescriptions["시가총액"] = new string[] {
-                "시가총액은 기업의 전체 가치를 의미하며, 주식 시장에서 거래되는 모든 주식의 가치를 합한 것이야.",
-                String.Format("쉽게 말해, [{0}]를 인수하고 싶으면 {1}원 만큼의 현금을 준비해야 해!", corp.CompName, Util.gf_CommaValue(corp.시가총액)),
+                ""
             };
 
-            var (maleCount, femaleCount, maleJanuarySalary, femaleJanuarySalary, maleTotalSalary, femaleTotalSalary) = Util.GetEmployeeCount(corp.dart_data);
-            double maleRatio = (double)maleCount / (maleCount + femaleCount) * 100;
-            double femaleRatio = (double)femaleCount / (maleCount + femaleCount) * 100;
-            double nEPS = double.Parse(corp.시가총액) / double.Parse(corp.PER);
-
             buildingDescriptions["인력정보"] = new string[] {
-                string.Format("[{0}]는 총 {1:N0}명의 임직원이 함께하고 있어!", corp.CompName, Util.gf_CommaValue(maleCount + femaleCount)),
-                string.Format("남성 직원은 {0:N0}명으로 {1:F1}%, 여성 직원은 {2:N0}명으로 {3:F1}%를 차지하고 있어.",
-                    Util.gf_CommaValue(maleCount), maleRatio,
-                    Util.gf_CommaValue(femaleCount), femaleRatio),
-                string.Format("올해 회사의 순이익이 {0}원으로 예상되는데, 직원의 인당 생산성은 {1:N0}으로 예측돼.", Util.ToKoreanCurrencyFormat(nEPS), Util.ToKoreanCurrencyFormat(nEPS / (maleCount + femaleCount))),
+                ""
             };
         }
 
@@ -652,7 +616,7 @@ namespace DevelopersHub.ClashOfWhatever
                             dicCorp.Add(item.ticker, new CorpData
                             {
                                 Ticker = item.ticker,
-                                CompName = item.compName,
+                                CompName = item.CompName,
                                 BPS = "0",
                                 DIV = "0",
                                 DPS = "0",
@@ -668,7 +632,7 @@ namespace DevelopersHub.ClashOfWhatever
                                 시가총액 = "0",
                                 저가 = "0",
                                 종가 = "0",
-                                dart_code = "",
+                                Date = "",
                                 dart_data = new DartData[0]
                             });
                         }
@@ -687,58 +651,11 @@ namespace DevelopersHub.ClashOfWhatever
             }
         }
 
-        private void LoadLocalData()
-        {
-            try
-            {
-                string path = "carrot_game_corp_data.csv";
-                string[] lines = File.ReadAllLines(Path.Combine(Application.dataPath, "Files", path));
-
-                foreach (string line in lines)
-                {
-                    var splitData = line.Split(',');
-                    if (splitData.Length < 17) continue;
-
-                    CorpData corp = new CorpData
-                    {
-                        Ticker = splitData[0],
-                        CompName = splitData[1],
-                        BPS = Util.gf_ToNumString(splitData[2]),
-                        DIV = Util.gf_ToNumString(splitData[3]),
-                        DPS = Util.gf_ToNumString(splitData[4]),
-                        EPS = Util.gf_ToNumString(splitData[5]),
-                        PBR = Util.gf_ToNumString(splitData[6]),
-                        PER = Util.gf_ToNumString(splitData[7]),
-                        거래대금 = Util.gf_ToNumString(splitData[8]),
-                        거래량 = Util.gf_ToNumString(splitData[9]),
-                        고가 = Util.gf_ToNumString(splitData[10]),
-                        등락률 = Util.gf_ToNumString(splitData[11]),
-                        상장주식수 = Util.gf_ToNumString(splitData[12]),
-                        시가 = Util.gf_ToNumString(splitData[13]),
-                        시가총액 = Util.gf_ToNumString(splitData[14]),
-                        저가 = Util.gf_ToNumString(splitData[15]),
-                        종가 = Util.gf_ToNumString(splitData[16]),
-                        dart_code = splitData.Length > 17 ? splitData[17] : "",
-                        dart_data = new DartData[0] // 로컬 데이터에서는 dart_data를 사용하지 않음
-                    };
-
-                    if (!String.IsNullOrEmpty(corp.CompName) && !String.IsNullOrEmpty(corp.BPS))
-                    {
-                        dicCorp[corp.Ticker] = corp;
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"LoadLocalData 로컬 데이터 로드 중 오류 발생: {e.Message}");
-            }
-        }
-
         [Serializable]
         private class StockItem
         {
             public string ticker;
-            public string compName;
+            public string CompName;
         }
 
         [Serializable]
@@ -798,7 +715,7 @@ namespace DevelopersHub.ClashOfWhatever
             public string 시가총액;
             public string 저가;
             public string 종가;
-            public string dart_code;
+            public string Date;
             public DartData[] dart_data;
         }      
 
